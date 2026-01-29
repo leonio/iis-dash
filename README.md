@@ -1,0 +1,59 @@
+# iis-dash Monorepo
+
+Vue 3.5 + Vite + Tailwind v4 + shadcn-vue frontend with a .NET 10 Minimal API backend using NTLM/Windows authentication.
+
+## Stack
+- **Frontend:** Vue 3.5, Vite, Tailwind CSS v4 (CSS-first), shadcn-vue, Unovis
+- **Backend:** .NET 10 Minimal API, Microsoft.AspNetCore.Authentication.Negotiate
+- **Auth:** NTLM / Windows Authentication
+- **CORS:** `http://localhost:5173` with credentials
+
+## Prerequisites
+- **Node.js** (latest LTS)
+- **pnpm**
+- **.NET SDK 10** (preview if needed)
+- Windows environment for NTLM testing
+
+## Setup
+```bash
+# install pnpm if needed
+npm install -g pnpm
+
+# frontend
+cd client
+pnpm install
+
+# backend
+cd ..\server
+dotnet restore
+```
+
+## Run
+```bash
+# frontend
+cd client
+pnpm dev
+
+# backend
+cd ..\server
+dotnet run
+```
+
+Frontend: http://localhost:5173
+Backend: http://localhost:5039
+
+## Endpoints
+- `GET /api/hello` → returns `User.Identity.Name` (requires NTLM)
+
+## Frontend notes
+- Tailwind v4 is configured in `src/app.css` using CSS-first `@theme`.
+- shadcn-vue components live under `src/components/ui`.
+- API calls use `credentials: 'include'` in `src/composables/useApi.ts` to pass NTLM tokens.
+
+## Backend notes
+- NTLM/Windows auth is enabled via `Microsoft.AspNetCore.Authentication.Negotiate`.
+- CORS allows `http://localhost:5173` with credentials.
+
+## Troubleshooting
+- Ensure the backend is in a trusted zone for NTLM to flow to the browser.
+- If you see 401s, verify Windows Authentication settings and browser policy.
