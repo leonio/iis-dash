@@ -1,0 +1,27 @@
+{
+  "app": {
+    "title": "IIS Log Dashboard",
+    "subtitle": "IIS Log Data Insights.",
+    "nav": {
+      "dashboard": "Dashboard",
+      "admin": "Admin"
+    },
+    "headers": {
+      "dashboard": "Dashboard · {section}",
+      "dashboardSubtitle": "Monitor metrics, analyze traffic patterns, and drill down into raw IIS logs.",
+      "admin": "Admin",
+      "adminSubtitle": "Upload and manage IIS log files."
+    }
+  },
+  "sections": {
+    "summary": "Summary",
+    "traffic": "Traffic",
+    "status": "Status",
+    "latency": "Latency",
+    "heatmap": "Heatmap",
+    "details": "Details"
+  },
+  "status": {
+    "loading": "Loading data..."
+  }
+}

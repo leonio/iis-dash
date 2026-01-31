@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import {
   Card,
   CardContent,
@@ -19,6 +20,7 @@ import {
   type LogQueryFilter,
 } from '@/composables/useApi'
 
+const { t, n, d } = useI18n()
 const { getLogMetrics, getHeatmap, getLogEntries, exportLogAnalytics } = useApi()
 
 const filters = reactive({
@@ -152,14 +154,14 @@ const summaryCards = computed(() => {
   }
 
   const latency = metrics.value.latency
-  const errorRate = `${(metrics.value.errorRate * 100).toFixed(2)}%`
+  const errorRate = n(metrics.value.errorRate, 'percent')
 
   return [
-    { label: 'Total requests', value: metrics.value.totalRequests.toLocaleString() },
-    { label: 'Error rate', value: errorRate },
-    { label: 'P50 latency (ms)', value: latency.p50Ms?.toLocaleString() ?? '—' },
-    { label: 'P95 latency (ms)', value: latency.p95Ms?.toLocaleString() ?? '—' },
-    { label: 'P99 latency (ms)', value: latency.p99Ms?.toLocaleString() ?? '—' },
+    { label: t('summary.cards.totalRequests'), value: n(metrics.value.totalRequests) },
+    { label: t('summary.cards.errorRate'), value: n(metrics.value.errorRate) },
+    { label: t('summary.cards.p50'), value: (latency.p50Ms != null) ? n(latency.p50Ms) : '—' },
+    { label: t('summary.cards.p95'), value: (latency.p95Ms != null) ? n(latency.p95Ms) : '—' },
+    { label: t('summary.cards.p99'), value: (latency.p99Ms != null) ? n(latency.p99Ms) : '—' },
   ]
 })
 
@@ -199,7 +201,7 @@ const loadAll = async () => {
     entries.value = entriesResponse.items
     totalCount.value = entriesResponse.totalCount
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : 'Failed to load analytics.'
+    loadError.value = error instanceof Error ? error.message : t('errors.loadFailed')
   } finally {
     isLoading.value = false
   }
@@ -225,7 +227,7 @@ const handleTrafficClick = async (bucketStart: string, count: number) => {
   const start = bucketStart
   const end = new Date(new Date(bucketStart).getTime() + trafficBucketMinutes * 60 * 1000).toISOString()
   await setDrilldown(
-    `Traffic ${new Date(bucketStart).toLocaleString()} (${count.toLocaleString()} reqs)`,
+    t('drilldown.traffic', { time: d(new Date(bucketStart), 'long'), count: n(count) }),
     { start, end },
   )
 }
@@ -236,7 +238,7 @@ const handleStatusClick = async (group: string) => {
     return
   }
 
-  await setDrilldown(`Status ${group}`, { statusGroup })
+  await setDrilldown(t('drilldown.status', { group }), { statusGroup })
 }
 
 const handleHeatmapClick = async (endpoint: string, bucketIndex: number) => {
@@ -247,7 +249,7 @@ const handleHeatmapClick = async (endpoint: string, bucketIndex: number) => {
   const startMinutes = bucketIndex * heatmap.value.bucketMinutes
   const endMinutes = startMinutes + heatmap.value.bucketMinutes
 
-  await setDrilldown(`Heatmap ${endpoint} @ ${heatmap.value.buckets[bucketIndex]}`,
+  await setDrilldown(t('drilldown.heatmap', { endpoint, bucket: heatmap.value.buckets[bucketIndex] }),
     {
       endpoint,
       timeOfDayStartMinutes: startMinutes,
@@ -297,7 +299,7 @@ const nextPage = async () => {
 }
 
 const formatDuration = (value: number | null | undefined) =>
-  value === null || value === undefined ? '—' : `${value.toLocaleString()} ms`
+  value === null || value === undefined ? '—' : t('latency_ms', { value: n(value, 'decimal') })
 
 const toggleSort = (key: SortKey) => {
   if (sortState.key === key) {
@@ -373,17 +375,26 @@ onMounted(() => {
     >
       <div class="flex items-center gap-3 rounded-md border border-muted-foreground/20 bg-card px-4 py-3 text-sm text-foreground shadow">
         <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/40 border-t-primary" />
-        Loading…
+        {{ t('status.loading') }}
       </div>
     </div>
     <div class="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_340px]">
-      <div class="space-y-6">
-        <Card>
-          <CardHeader>
+      <div class="space-y-6 pb-20">
+        <Card class="bg-primary/5 border-primary/10">
+          <CardHeader class="py-3">
+            <CardTitle class="text-sm font-medium">{{ t('dashboard_usage.title') }}</CardTitle>
+          </CardHeader>
+          <CardContent class="pb-3 text-xs text-muted-foreground leading-relaxed">
+            {{ t(`dashboard_usage.${activeSection}`) }}
+          </CardContent>
+        </Card>
+
+        <Card class="sticky top-0 z-20 border-b-primary/10 bg-card/95 backdrop-blur shadow-sm">
+          <CardHeader class="py-4">
             <div class="flex flex-col gap-3">
               <div>
-                <CardTitle>Usage analytics</CardTitle>
-                <CardDescription>Choose a view and drill down into the data.</CardDescription>
+                <CardTitle>{{ t('nav.title') }}</CardTitle>
+                <CardDescription class="hidden sm:block">{{ t('nav.subtitle') }}</CardDescription>
               </div>
               <div class="flex flex-wrap gap-2">
                 <RouterLink to="/dashboard/summary" class="no-underline">
@@ -392,7 +403,7 @@ onMounted(() => {
                     variant="outline"
                     :class="activeSection === 'summary' ? 'border-primary text-primary' : ''"
                   >
-                    Summary
+                    {{ t('sections.summary') }}
                   </Button>
                 </RouterLink>
                 <RouterLink to="/dashboard/traffic" class="no-underline">
@@ -401,7 +412,7 @@ onMounted(() => {
                     variant="outline"
                     :class="activeSection === 'traffic' ? 'border-primary text-primary' : ''"
                   >
-                    Traffic
+                    {{ t('sections.traffic') }}
                   </Button>
                 </RouterLink>
                 <RouterLink to="/dashboard/status" class="no-underline">
@@ -410,7 +421,7 @@ onMounted(() => {
                     variant="outline"
                     :class="activeSection === 'status' ? 'border-primary text-primary' : ''"
                   >
-                    Status
+                    {{ t('sections.status') }}
                   </Button>
                 </RouterLink>
                 <RouterLink to="/dashboard/latency" class="no-underline">
@@ -419,7 +430,7 @@ onMounted(() => {
                     variant="outline"
                     :class="activeSection === 'latency' ? 'border-primary text-primary' : ''"
                   >
-                    Latency
+                    {{ t('sections.latency') }}
                   </Button>
                 </RouterLink>
                 <RouterLink to="/dashboard/heatmap" class="no-underline">
@@ -428,7 +439,7 @@ onMounted(() => {
                     variant="outline"
                     :class="activeSection === 'heatmap' ? 'border-primary text-primary' : ''"
                   >
-                    Heatmap
+                    {{ t('sections.heatmap') }}
                   </Button>
                 </RouterLink>
                 <RouterLink to="/dashboard/details" class="no-underline">
@@ -437,7 +448,7 @@ onMounted(() => {
                     variant="outline"
                     :class="activeSection === 'details' ? 'border-primary text-primary' : ''"
                   >
-                    Details
+                    {{ t('sections.details') }}
                   </Button>
                 </RouterLink>
               </div>
@@ -448,10 +459,10 @@ onMounted(() => {
         <Card v-if="drilldown">
           <CardContent class="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="font-medium text-foreground">Drill-down:</span>
+              <span class="font-medium text-foreground">{{ t('drilldown.label') }}</span>
               <span class="text-muted-foreground">{{ drilldown.label }}</span>
               <Button type="button" variant="outline" size="sm" @click="clearDrilldown">
-                Clear drill-down
+                {{ t('drilldown.clear') }}
               </Button>
             </div>
           </CardContent>
@@ -461,8 +472,8 @@ onMounted(() => {
 
         <Card v-if="activeSection === 'summary'">
           <CardHeader>
-            <CardTitle>Summary</CardTitle>
-            <CardDescription>Overall metrics for the current filter.</CardDescription>
+            <CardTitle>{{ t('summary.title') }}</CardTitle>
+            <CardDescription>{{ t('summary.subtitle') }}</CardDescription>
           </CardHeader>
           <CardContent>
             <div v-if="summaryCards.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -475,7 +486,7 @@ onMounted(() => {
                 <div class="text-lg font-semibold text-foreground">{{ card.value }}</div>
               </div>
             </div>
-            <div v-else class="text-sm text-muted-foreground">No summary data yet.</div>
+            <div v-else class="text-sm text-muted-foreground">{{ t('summary.empty') }}</div>
           </CardContent>
         </Card>
 
@@ -483,19 +494,19 @@ onMounted(() => {
           <CardHeader>
             <div class="flex items-center justify-between gap-2">
               <div>
-                <CardTitle>Traffic (requests/min)</CardTitle>
-                <CardDescription>{{ trafficBucketMinutes }}-minute buckets</CardDescription>
+                <CardTitle>{{ t('traffic.title') }}</CardTitle>
+                <CardDescription>{{ t('traffic.subtitle', { minutes: trafficBucketMinutes }) }}</CardDescription>
               </div>
               <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Traffic')">
-                {{ isExporting ? 'Exporting…' : 'Export' }}
+                {{ isExporting ? t('buttons.exporting') : t('buttons.export') }}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div v-if="!metrics" class="text-sm text-muted-foreground">No traffic data.</div>
+            <div v-if="!metrics" class="text-sm text-muted-foreground">{{ t('traffic.empty') }}</div>
             <div v-else class="space-y-2">
               <div class="text-xs text-muted-foreground">
-                Click a row to drill down by time.
+                {{ t('traffic.instruction') }}
               </div>
               <div class="space-y-1">
                 <div
@@ -513,14 +524,14 @@ onMounted(() => {
                       :style="{ width: `${Math.min(100, (point.requestsPerMinute / trafficMaxRate) * 100)}%` }"
                     />
                   </button>
-                  <span class="w-32 text-muted-foreground">{{ new Date(point.bucketStart).toLocaleString() }}</span>
-                  <span class="w-16 text-right text-foreground">{{ point.requestsPerMinute.toFixed(2) }}</span>
-                  <span class="w-14 text-right text-muted-foreground">{{ point.count }}</span>
+                  <span class="w-32 text-muted-foreground">{{ d(new Date(point.bucketStart), 'long') }}</span>
+                  <span class="w-16 text-right text-foreground">{{ n(point.requestsPerMinute, 'decimal') }}</span>
+                  <span class="w-14 text-right text-muted-foreground">{{ n(point.count) }}</span>
                 </div>
               </div>
 
               <div v-if="drilldown" class="space-y-2 pt-4">
-                <div class="text-sm font-medium text-foreground">Row details</div>
+                <div class="text-sm font-medium text-foreground">{{ t('drilldown.detailsTitle') }}</div>
                 <div class="overflow-x-auto rounded-md border border-muted-foreground/20">
                   <table class="min-w-full text-sm">
                     <thead class="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
@@ -531,7 +542,7 @@ onMounted(() => {
                             class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                             @click="toggleSort('timestamp')"
                           >
-                            Timestamp
+                            {{ t('table.timestamp') }}
                             <span class="text-[10px]">{{ sortIndicator('timestamp') }}</span>
                           </button>
                         </th>
@@ -541,7 +552,7 @@ onMounted(() => {
                             class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                             @click="toggleSort('method')"
                           >
-                            Method
+                            {{ t('table.method') }}
                             <span class="text-[10px]">{{ sortIndicator('method') }}</span>
                           </button>
                         </th>
@@ -551,7 +562,7 @@ onMounted(() => {
                             class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                             @click="toggleSort('endpoint')"
                           >
-                            Endpoint
+                            {{ t('table.endpoint') }}
                             <span class="text-[10px]">{{ sortIndicator('endpoint') }}</span>
                           </button>
                         </th>
@@ -561,7 +572,7 @@ onMounted(() => {
                             class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                             @click="toggleSort('latency')"
                           >
-                            Latency
+                            {{ t('table.latency') }}
                             <span class="text-[10px]">{{ sortIndicator('latency') }}</span>
                           </button>
                         </th>
@@ -570,12 +581,12 @@ onMounted(() => {
                     <tbody>
                       <tr v-if="entries.length === 0">
                         <td colspan="4" class="px-3 py-4 text-center text-sm text-muted-foreground">
-                          No entries for the selected row.
+                          {{ t('traffic.rowEmpty') }}
                         </td>
                       </tr>
                       <tr v-for="entry in sortedEntries" :key="entry.id" class="border-t border-muted-foreground/10">
                         <td class="px-3 py-2 text-muted-foreground">
-                          {{ entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '—' }}
+                          {{ entry.timestamp ? d(new Date(entry.timestamp), 'long') : '—' }}
                         </td>
                         <td class="px-3 py-2 text-foreground">{{ entry.method ?? '—' }}</td>
                         <td class="px-3 py-2 text-foreground">{{ entry.normalizedEndpoint }}</td>
@@ -593,18 +604,18 @@ onMounted(() => {
           <CardHeader>
             <div class="flex items-center justify-between gap-2">
               <div>
-                <CardTitle>Status distribution</CardTitle>
-                <CardDescription>Grouped by 2xx/3xx/4xx/5xx.</CardDescription>
+                <CardTitle>{{ t('status_dist.title') }}</CardTitle>
+                <CardDescription>{{ t('status_dist.subtitle') }}</CardDescription>
               </div>
               <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Status')">
-                {{ isExporting ? 'Exporting…' : 'Export' }}
+                {{ isExporting ? t('buttons.exporting') : t('buttons.export') }}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div v-if="!metrics" class="text-sm text-muted-foreground">No status data.</div>
+            <div v-if="!metrics" class="text-sm text-muted-foreground">{{ t('status_dist.empty') }}</div>
             <div v-else class="space-y-2">
-              <div class="text-xs text-muted-foreground">Click a group to drill down.</div>
+              <div class="text-xs text-muted-foreground">{{ t('status_dist.instruction') }}</div>
               <div class="space-y-2">
                 <button
                   v-for="group in metrics.statusGroups"
@@ -621,12 +632,12 @@ onMounted(() => {
                       :style="{ width: `${(group.count / Math.max(1, metrics.totalRequests)) * 100}%` }"
                     />
                   </div>
-                  <span class="w-16 text-right text-sm text-foreground">{{ group.count }}</span>
+                  <span class="w-16 text-right text-sm text-foreground">{{ n(group.count) }}</span>
                 </button>
               </div>
 
               <div v-if="drilldown" class="space-y-2 pt-4">
-                <div class="text-sm font-medium text-foreground">Row details</div>
+                <div class="text-sm font-medium text-foreground">{{ t('drilldown.detailsTitle') }}</div>
                 <div class="overflow-x-auto rounded-md border border-muted-foreground/20">
                   <table class="min-w-full text-sm">
                     <thead class="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
@@ -637,7 +648,7 @@ onMounted(() => {
                             class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                             @click="toggleSort('timestamp')"
                           >
-                            Timestamp
+                            {{ t('table.timestamp') }}
                             <span class="text-[10px]">{{ sortIndicator('timestamp') }}</span>
                           </button>
                         </th>
@@ -647,7 +658,7 @@ onMounted(() => {
                             class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                             @click="toggleSort('method')"
                           >
-                            Method
+                            {{ t('table.method') }}
                             <span class="text-[10px]">{{ sortIndicator('method') }}</span>
                           </button>
                         </th>
@@ -657,7 +668,7 @@ onMounted(() => {
                             class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                             @click="toggleSort('status')"
                           >
-                            Status
+                            {{ t('table.status') }}
                             <span class="text-[10px]">{{ sortIndicator('status') }}</span>
                           </button>
                         </th>
@@ -667,7 +678,7 @@ onMounted(() => {
                             class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                             @click="toggleSort('endpoint')"
                           >
-                            Endpoint
+                            {{ t('table.endpoint') }}
                             <span class="text-[10px]">{{ sortIndicator('endpoint') }}</span>
                           </button>
                         </th>
@@ -676,12 +687,12 @@ onMounted(() => {
                     <tbody>
                       <tr v-if="entries.length === 0">
                         <td colspan="4" class="px-3 py-4 text-center text-sm text-muted-foreground">
-                          No entries for the selected group.
+                          {{ t('status_dist.rowEmpty') }}
                         </td>
                       </tr>
                       <tr v-for="entry in sortedEntries" :key="entry.id" class="border-t border-muted-foreground/10">
                         <td class="px-3 py-2 text-muted-foreground">
-                          {{ entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '—' }}
+                          {{ entry.timestamp ? d(new Date(entry.timestamp), 'long') : '—' }}
                         </td>
                         <td class="px-3 py-2 text-foreground">{{ entry.method ?? '—' }}</td>
                         <td class="px-3 py-2 text-foreground">
@@ -701,37 +712,42 @@ onMounted(() => {
           <CardHeader>
             <div class="flex items-center justify-between gap-2">
               <div>
-                <CardTitle>Latency percentiles</CardTitle>
-                <CardDescription>Average and $p$-values for the selected range.</CardDescription>
+                <CardTitle>{{ t('latency_percent.title') }}</CardTitle>
+                <CardDescription>{{ t('latency_percent.subtitle') }}</CardDescription>
               </div>
               <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Latency')">
-                {{ isExporting ? 'Exporting…' : 'Export' }}
+                {{ isExporting ? t('buttons.exporting') : t('buttons.export') }}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div v-if="!metrics" class="text-sm text-muted-foreground">No latency data.</div>
+            <div v-if="isLoading && !metrics" class="flex items-center justify-center py-8">
+              <span class="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-primary" />
+            </div>
+            <div v-else-if="!metrics || metrics.latency.sampleCount === 0" class="py-8 text-center text-sm text-muted-foreground">
+              {{ t('latency_percent.empty') }}
+            </div>
             <div v-else class="grid gap-3 sm:grid-cols-2">
               <div class="rounded-md border border-muted-foreground/20 p-3 text-sm">
-                <div class="text-muted-foreground">Average</div>
+                <div class="text-muted-foreground">{{ t('latency_percent.average') }}</div>
                 <div class="text-lg font-semibold text-foreground">
                   {{ formatDuration(metrics.latency.averageMs ?? null) }}
                 </div>
               </div>
               <div class="rounded-md border border-muted-foreground/20 p-3 text-sm">
-                <div class="text-muted-foreground">P50</div>
+                <div class="text-muted-foreground">{{ t('latency_percent.p50') }}</div>
                 <div class="text-lg font-semibold text-foreground">
                   {{ formatDuration(metrics.latency.p50Ms ?? null) }}
                 </div>
               </div>
               <div class="rounded-md border border-muted-foreground/20 p-3 text-sm">
-                <div class="text-muted-foreground">P95</div>
+                <div class="text-muted-foreground">{{ t('latency_percent.p95') }}</div>
                 <div class="text-lg font-semibold text-foreground">
                   {{ formatDuration(metrics.latency.p95Ms ?? null) }}
                 </div>
               </div>
               <div class="rounded-md border border-muted-foreground/20 p-3 text-sm">
-                <div class="text-muted-foreground">P99</div>
+                <div class="text-muted-foreground">{{ t('latency_percent.p99') }}</div>
                 <div class="text-lg font-semibold text-foreground">
                   {{ formatDuration(metrics.latency.p99Ms ?? null) }}
                 </div>
@@ -744,25 +760,25 @@ onMounted(() => {
           <CardHeader>
             <div class="flex items-center justify-between gap-2">
               <div>
-                <CardTitle>Endpoint usage heatmap</CardTitle>
-                <CardDescription>15-minute buckets by time-of-day.</CardDescription>
+                <CardTitle>{{ t('heatmap.title') }}</CardTitle>
+                <CardDescription>{{ t('heatmap.subtitle') }}</CardDescription>
               </div>
               <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Heatmap')">
-                {{ isExporting ? 'Exporting…' : 'Export' }}
+                {{ isExporting ? t('buttons.exporting') : t('buttons.export') }}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div v-if="!heatmap" class="text-sm text-muted-foreground">No heatmap data.</div>
+            <div v-if="!heatmap" class="text-sm text-muted-foreground">{{ t('heatmap.empty') }}</div>
             <div v-else class="space-y-2">
-              <div class="text-xs text-muted-foreground">Click a cell to drill down.</div>
+              <div class="text-xs text-muted-foreground">{{ t('heatmap.instruction') }}</div>
               <div class="overflow-x-auto">
                 <div class="min-w-[900px]">
                   <div
                     class="grid"
                     :style="{ gridTemplateColumns: `200px repeat(${heatmap.buckets.length}, minmax(16px, 1fr))` }"
                   >
-                    <div class="sticky left-0 z-10 bg-muted/30 px-2 py-2 text-sm font-semibold text-foreground">Endpoint</div>
+                    <div class="sticky left-0 z-10 bg-muted/30 px-2 py-2 text-sm font-semibold text-foreground">{{ t('table.endpoint') }}</div>
                     <div
                       v-for="bucket in heatmap.buckets"
                       :key="bucket"
@@ -801,11 +817,11 @@ onMounted(() => {
           <CardHeader>
             <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
-                <CardTitle>Detail panel</CardTitle>
-                <CardDescription>Summary metrics and raw entries.</CardDescription>
+                <CardTitle>{{ t('details.title') }}</CardTitle>
+                <CardDescription>{{ t('details.subtitle') }}</CardDescription>
               </div>
               <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Entries')">
-                {{ isExporting ? 'Exporting…' : 'Export entries' }}
+                {{ isExporting ? t('buttons.exporting') : t('buttons.exportEntries') }}
               </Button>
             </div>
           </CardHeader>
@@ -831,7 +847,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                         @click="toggleSort('timestamp')"
                       >
-                        Timestamp
+                        {{ t('table.timestamp') }}
                         <span class="text-[10px]">{{ sortIndicator('timestamp') }}</span>
                       </button>
                     </th>
@@ -841,7 +857,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                         @click="toggleSort('method')"
                       >
-                        Method
+                        {{ t('table.method') }}
                         <span class="text-[10px]">{{ sortIndicator('method') }}</span>
                       </button>
                     </th>
@@ -851,7 +867,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                         @click="toggleSort('endpoint')"
                       >
-                        Endpoint
+                        {{ t('table.endpoint') }}
                         <span class="text-[10px]">{{ sortIndicator('endpoint') }}</span>
                       </button>
                     </th>
@@ -861,7 +877,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                         @click="toggleSort('status')"
                       >
-                        Status
+                        {{ t('table.status') }}
                         <span class="text-[10px]">{{ sortIndicator('status') }}</span>
                       </button>
                     </th>
@@ -871,7 +887,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                         @click="toggleSort('latency')"
                       >
-                        Latency
+                        {{ t('table.latency') }}
                         <span class="text-[10px]">{{ sortIndicator('latency') }}</span>
                       </button>
                     </th>
@@ -881,7 +897,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                         @click="toggleSort('clientIp')"
                       >
-                        Client IP
+                        {{ t('table.clientIp') }}
                         <span class="text-[10px]">{{ sortIndicator('clientIp') }}</span>
                       </button>
                     </th>
@@ -891,7 +907,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                         @click="toggleSort('user')"
                       >
-                        User
+                        {{ t('table.user') }}
                         <span class="text-[10px]">{{ sortIndicator('user') }}</span>
                       </button>
                     </th>
@@ -901,7 +917,7 @@ onMounted(() => {
                         class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                         @click="toggleSort('userAgent')"
                       >
-                        User Agent
+                        {{ t('table.userAgent') }}
                         <span class="text-[10px]">{{ sortIndicator('userAgent') }}</span>
                       </button>
                     </th>
@@ -910,12 +926,12 @@ onMounted(() => {
                 <tbody>
                   <tr v-if="entries.length === 0">
                     <td colspan="8" class="px-3 py-4 text-center text-sm text-muted-foreground">
-                      No entries for the selected filters.
+                      {{ t('details.empty') }}
                     </td>
                   </tr>
                   <tr v-for="entry in sortedEntries" :key="entry.id" class="border-t border-muted-foreground/10">
                     <td class="px-3 py-2 text-muted-foreground">
-                      {{ entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '—' }}
+                      {{ entry.timestamp ? d(new Date(entry.timestamp), 'long') : '—' }}
                     </td>
                     <td class="px-3 py-2 text-foreground">{{ entry.method ?? '—' }}</td>
                     <td class="px-3 py-2 text-foreground">{{ entry.normalizedEndpoint }}</td>
@@ -933,7 +949,7 @@ onMounted(() => {
 
             <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
               <div class="text-muted-foreground">
-                Page {{ page }} of {{ totalPages }} ({{ totalCount.toLocaleString() }} entries)
+                {{ t('table.pagination', { page, totalPages, count: n(totalCount) }) }}
               </div>
               <div class="flex items-center gap-2">
                 <select
@@ -946,7 +962,7 @@ onMounted(() => {
                   <option :value="100">100</option>
                 </select>
                 <Button type="button" variant="outline" size="sm" :disabled="page <= 1" @click="prevPage">
-                  Prev
+                  {{ t('buttons.prev') }}
                 </Button>
                 <Button
                   type="button"
@@ -955,7 +971,7 @@ onMounted(() => {
                   :disabled="page >= totalPages"
                   @click="nextPage"
                 >
-                  Next
+                  {{ t('buttons.next') }}
                 </Button>
               </div>
             </div>
@@ -966,12 +982,12 @@ onMounted(() => {
       <div class="space-y-6 md:sticky md:top-6">
         <Card>
           <CardHeader>
-            <CardTitle>Filters</CardTitle>
-            <CardDescription>Refine analytics results.</CardDescription>
+            <CardTitle>{{ t('filters.title') }}</CardTitle>
+            <CardDescription>{{ t('filters.subtitle') }}</CardDescription>
           </CardHeader>
           <CardContent class="grid gap-4">
             <div class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-foreground" for="filter-start">Start</label>
+              <label class="text-sm font-medium text-foreground" for="filter-start">{{ t('filters.start') }}</label>
               <input
                 id="filter-start"
                 v-model="filters.start"
@@ -980,7 +996,7 @@ onMounted(() => {
               />
             </div>
             <div class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-foreground" for="filter-end">End</label>
+              <label class="text-sm font-medium text-foreground" for="filter-end">{{ t('filters.end') }}</label>
               <input
                 id="filter-end"
                 v-model="filters.end"
@@ -989,7 +1005,7 @@ onMounted(() => {
               />
             </div>
             <div class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-foreground" for="filter-method">Method</label>
+              <label class="text-sm font-medium text-foreground" for="filter-method">{{ t('filters.method') }}</label>
               <input
                 id="filter-method"
                 v-model="filters.method"
@@ -998,7 +1014,7 @@ onMounted(() => {
               />
             </div>
             <div class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-foreground" for="filter-endpoint">Endpoint</label>
+              <label class="text-sm font-medium text-foreground" for="filter-endpoint">{{ t('filters.endpoint') }}</label>
               <input
                 id="filter-endpoint"
                 v-model="filters.endpoint"
@@ -1007,13 +1023,13 @@ onMounted(() => {
               />
             </div>
             <div class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-foreground" for="filter-status">Status group</label>
+              <label class="text-sm font-medium text-foreground" for="filter-status">{{ t('filters.statusGroup') }}</label>
               <select
                 id="filter-status"
                 v-model="filters.statusGroup"
                 class="rounded-md border border-muted-foreground/40 bg-background px-3 py-2 text-sm text-foreground"
               >
-                <option value="all">All</option>
+                <option value="all">{{ t('filters.all') }}</option>
                 <option value="2">2xx</option>
                 <option value="3">3xx</option>
                 <option value="4">4xx</option>
@@ -1021,28 +1037,28 @@ onMounted(() => {
               </select>
             </div>
             <div class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-foreground" for="filter-topn">Top endpoints</label>
+              <label class="text-sm font-medium text-foreground" for="filter-topn">{{ t('filters.topN') }}</label>
               <select
                 id="filter-topn"
                 v-model.number="filters.topN"
                 class="rounded-md border border-muted-foreground/40 bg-background px-3 py-2 text-sm text-foreground"
               >
-                <option :value="5">Top 5</option>
-                <option :value="10">Top 10</option>
-                <option :value="20">Top 20</option>
-                <option :value="30">Top 30</option>
+                <option :value="5">{{ t('filters.topX', { n: 5 }) }}</option>
+                <option :value="10">{{ t('filters.topX', { n: 10 }) }}</option>
+                <option :value="20">{{ t('filters.topX', { n: 20 }) }}</option>
+                <option :value="30">{{ t('filters.topX', { n: 30 }) }}</option>
               </select>
               <label class="flex items-center gap-2 text-sm text-muted-foreground">
                 <input v-model="filters.includeOther" type="checkbox" class="h-4 w-4" />
-                Include Other bucket
+                {{ t('filters.includeOther') }}
               </label>
             </div>
             <div class="flex flex-col gap-2">
               <Button type="button" :disabled="isLoading" @click="applyFilters">
-                {{ isLoading ? 'Refreshing…' : 'Apply filters' }}
+                {{ isLoading ? t('buttons.refreshing') : t('buttons.apply') }}
               </Button>
               <Button type="button" variant="outline" :disabled="isExporting" @click="exportChart('All')">
-                {{ isExporting ? 'Exporting…' : 'Export all charts' }}
+                {{ isExporting ? t('buttons.exporting') : t('buttons.exportAll') }}
               </Button>
             </div>
           </CardContent>
@@ -1051,3 +1067,244 @@ onMounted(() => {
     </div>
   </section>
 </template>
+
+<i18n lang="json">
+{
+  "en": {
+    "dashboard_usage": {
+      "title": "Interactive Guide",
+      "summary": "This overview combines key performance indicators. Use the sections below for specialized analysis.",
+      "traffic": "View request volume over time. The list shows your busiest endpoints; you can filter the whole dashboard by clicking any endpoint path.",
+      "status": "Monitor for 4xx (client) and 5xx (server) errors. Select a status code to see exactly which requests are failing.",
+      "latency": "Track performance percentiles. High P99 values indicate slow user experiences that may need optimization.",
+      "heatmap": "Visualize traffic density across time and endpoints. Brighter areas indicate higher request volumes.",
+      "details": "View raw log entries with full metadata. You can sort by any column or export the filtered results to Excel."
+    },
+    "latency_ms": "{value} ms",
+    "nav": {
+      "title": "Analytics Sections",
+      "subtitle": "Switch between different visualization modes."
+    },
+    "summary": {
+      "title": "Summary",
+      "subtitle": "High-level metrics.",
+      "empty": "No overall metrics available for these filters.",
+      "cards": {
+        "totalRequests": "Total Requests",
+        "requests": "Total Requests",
+        "avgLatency": "Avg Latency",
+        "errorRate": "Error Rate (5xx)",
+        "uniqueIps": "Unique IPs",
+        "distinctEndpoints": "Distinct Endpoints",
+        "p50": "P50 (Median)",
+        "p95": "P95",
+        "p99": "P99"
+      }
+    },
+    "drilldown": {
+      "traffic": "Traffic Distribution",
+      "status": "HTTP Status Distribution",
+      "latency": "Latency Percentiles",
+      "heatmap": "Request Heatmap",
+      "details": "Details",
+      "label": "Drilldown",
+      "detailsTitle": "Detailed logs"
+    },
+    "traffic": {
+      "title": "Traffic Distribution",
+      "subtitle": "Requests per endpoint.",
+      "instruction": "Click on any endpoint to filter by that path.",
+      "chartLabel": "Requests",
+      "empty": "No traffic data for these filters."
+    },
+    "status_dist": {
+      "title": "HTTP Status Distribution",
+      "subtitle": "Breakdown of response codes.",
+      "instruction": "Select a category to drill down into specific responses.",
+      "chartLabel": "Count",
+      "empty": "No status data for these filters."
+    },
+    "latency_percent": {
+      "title": "Latency Percentiles",
+      "subtitle": "Performance distribution in milliseconds.",
+      "average": "Average Latency",
+      "chartLabel": "ms",
+      "p50": "P50 (Median)",
+      "p75": "P75",
+      "p90": "P90",
+      "p95": "P95",
+      "p99": "P99",
+      "empty": "No latency data for these filters."
+    },
+    "heatmap": {
+      "title": "Request Heatmap",
+      "subtitle": "Traffic density over time and endpoint.",
+      "instruction": "Darker colors represent higher traffic during that hour.",
+      "yLabel": "Endpoint",
+      "xLabel": "Date/Time",
+      "empty": "No heatmap data for these filters."
+    },
+    "details": {
+      "title": "Detail panel",
+      "subtitle": "Summary metrics and raw entries.",
+      "empty": "No entries for the selected filters."
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "method": "Method",
+      "endpoint": "Endpoint",
+      "status": "Status",
+      "latency": "Latency",
+      "clientIp": "Client IP",
+      "user": "User",
+      "userAgent": "User Agent",
+      "pagination": "Page {page} of {totalPages} ({count} entries)"
+    },
+    "filters": {
+      "title": "Filters",
+      "subtitle": "Refine analytics results.",
+      "start": "Start",
+      "end": "End",
+      "method": "Method",
+      "endpoint": "Endpoint",
+      "statusGroup": "Status group",
+      "all": "All",
+      "topN": "Top endpoints",
+      "topX": "Top {n}",
+      "includeOther": "Include Other bucket"
+    },
+    "buttons": {
+      "exporting": "Exporting...",
+      "export": "Export to Excel",
+      "exportTraffic": "Export Traffic",
+      "exportStatus": "Export Status",
+      "exportLatency": "Export Latency",
+      "exportHeatmap": "Export Heatmap",
+      "exportEntries": "Export to Excel",
+      "exportAll": "Export all charts",
+      "apply": "Apply filters",
+      "refreshing": "Refreshing...",
+      "prev": "Prev",
+      "next": "Next"
+    }
+  },
+  "de": {
+    "dashboard_usage": {
+      "title": "Interaktive Hilfe",
+      "summary": "Diese Übersicht kombiniert wichtige Leistungskennzahlen. Nutzen Sie die Bereiche unten für spezialisierte Analysen.",
+      "traffic": "Anfragevolumen im Zeitverlauf. Die Liste zeigt die am stärksten frequentierten Endpunkte; Filtern Sie das Dashboard per Klick auf einen Pfad.",
+      "status": "Überwachen Sie 4xx (Client) und 5xx (Server) Fehler. Wählen Sie einen Statuscode aus, um gezielt fehlerhafte Anfragen zu analysieren.",
+      "latency": "Verfolgen Sie Latenz-Perzentile. Hohe P99-Werte deuten auf Verzögerungen hin, die optimiert werden sollten.",
+      "heatmap": "Visualisieren Sie die Verkehrsdichte über Zeit und Endpunkte. Hellere Bereiche weisen auf höheres Aufkommen hin.",
+      "details": "Rohe Protokolleinträge mit allen Metadaten. Sie können Spalten sortieren oder die gefilterten Ergebnisse als Excel exportieren."
+    },
+    "latency_ms": "{value} ms",
+    "nav": {
+      "title": "Analysebereiche",
+      "subtitle": "Zwischen verschiedenen Visualisierungsmodi wechseln."
+    },
+    "summary": {
+      "title": "Zusammenfassung",
+      "subtitle": "Wichtige Metriken auf einen Blick.",
+      "empty": "Keine Metriken für diese Filter verfügbar.",
+      "cards": {
+        "totalRequests": "Anfragen gesamt",
+        "requests": "Anfragen gesamt",
+        "avgLatency": "Durchschn. Latenz",
+        "errorRate": "Fehlerrate (5xx)",
+        "uniqueIps": "Eindeutige IPs",
+        "distinctEndpoints": "Verschiedene Endpunkte",
+        "p50": "P50 (Median)",
+        "p95": "P95",
+        "p99": "P99"
+      }
+    },
+    "drilldown": {
+      "traffic": "Verkehrsverteilung",
+      "status": "HTTP-Statusverteilung",
+      "latency": "Latenz-Perzentile",
+      "heatmap": "Anfrage-Heatmap",
+      "details": "Details",
+      "label": "Drilldown",
+      "detailsTitle": "Detaillierte Protokolle"
+    },
+    "traffic": {
+      "title": "Verkehrsverteilung",
+      "subtitle": "Anfragen pro Endpunkt.",
+      "instruction": "Klicken Sie auf einen Endpunkt, um nach diesem Pfad zu filtern.",
+      "chartLabel": "Anfragen",
+      "empty": "Keine Verkehrsdaten für diese Filter."
+    },
+    "status_dist": {
+      "title": "HTTP-Statusverteilung",
+      "subtitle": "Aufschlüsselung der Antwortcodes.",
+      "instruction": "Wählen Sie eine Kategorie, um spezifische Antworten zu analysieren.",
+      "chartLabel": "Anzahl",
+      "empty": "Keine Statusdaten für diese Filter."
+    },
+    "latency_percent": {
+      "title": "Latenz-Perzentile",
+      "subtitle": "Leistungsverteilung in Millisekunden.",
+      "average": "Durchschnittliche Latenz",
+      "chartLabel": "ms",
+      "p50": "P50 (Median)",
+      "p75": "P75",
+      "p90": "P90",
+      "p95": "P95",
+      "p99": "P99",
+      "empty": "Keine Latenzdaten für diese Filter."
+    },
+    "heatmap": {
+      "title": "Anfrage-Heatmap",
+      "subtitle": "Verkehrsdichte über Zeit und Endpunkt.",
+      "instruction": "Dunklere Farben stehen für höheres Aufkommen in dieser Stunde.",
+      "yLabel": "Endpunkt",
+      "xLabel": "Datum/Zeit",
+      "empty": "Keine Heatmap-Daten für diese Filter."
+    },
+    "details": {
+      "title": "Detailansicht",
+      "subtitle": "Zusammenfassende Metriken und Rohdaten.",
+      "empty": "Keine Einträge für die gewählten Filter."
+    },
+    "table": {
+      "timestamp": "Zeitstempel",
+      "method": "Methode",
+      "endpoint": "Endpunkt",
+      "status": "Status",
+      "latency": "Latenz",
+      "clientIp": "Client-IP",
+      "user": "Benutzer",
+      "userAgent": "User-Agent",
+      "pagination": "Seite {page} von {totalPages} ({count} Einträge)"
+    },
+    "filters": {
+      "title": "Filter",
+      "subtitle": "Analyseergebnisse verfeinern.",
+      "start": "Beginn",
+      "end": "Ende",
+      "method": "Methode",
+      "endpoint": "Endpunkt",
+      "statusGroup": "Statusgruppe",
+      "all": "Alle",
+      "topN": "Top-Endpunkte",
+      "topX": "Top {n}",
+      "includeOther": "Kategorie 'Andere' einschließen"
+    },
+    "buttons": {
+      "exporting": "Exportiere...",
+      "export": "Daten exportieren",
+      "exportTraffic": "Verkehr exportieren",
+      "exportStatus": "Status exportieren",
+      "exportLatency": "Latenz exportieren",
+      "exportHeatmap": "Heatmap exportieren",
+      "exportEntries": "Einträge exportieren",
+      "exportAll": "Alle Diagramme exportieren",
+      "apply": "Filter anwenden",
+      "refreshing": "Aktualisiere...",
+      "prev": "Zurück",
+      "next": "Weiter"
+    }
+  }
+}
+</i18n>

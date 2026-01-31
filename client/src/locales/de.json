@@ -1,0 +1,27 @@
+{
+  "app": {
+    "title": "IIS Log Dashboard",
+    "subtitle": "Einblicke in den Log-Dateien von IIS.",
+    "nav": {
+      "dashboard": "Dashboard",
+      "admin": "Admin"
+    },
+    "headers": {
+      "dashboard": "Dashboard · {section}",
+      "dashboardSubtitle": "Analysieren Sie Metriken, Verkehrsmuster und detaillierte IIS-Protokolle.",
+      "admin": "Admin",
+      "adminSubtitle": "IIS-Protokolldateien hochladen und verwalten."
+    }
+  },
+  "sections": {
+    "summary": "Übersicht",
+    "traffic": "Verkehr",
+    "status": "Status",
+    "latency": "Latenz",
+    "heatmap": "Heatmap",
+    "details": "Details"
+  },
+  "status": {
+    "loading": "Daten werden geladen..."
+  }
+}
