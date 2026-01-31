@@ -60,12 +60,6 @@ app.UseCors("ClientCors");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/hello", (HttpContext context) =>
-{
-    var name = context.User.Identity?.Name ?? "";
-    return Results.Text(name);
-}).RequireAuthorization();
-
 app.MapVersionEndpoints();
 app.MapLogPrecheckEndpoints();
 app.MapLogUploadEndpoints();
