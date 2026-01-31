@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import { useApi } from '@/composables/useApi'
 
 const { t } = useI18n()
 const route = useRoute()
+const { getVersion } = useApi()
+
+const clientVersion = import.meta.env.VITE_APP_VERSION || 'Dev'
+const serverVersion = ref<string>('...')
+
+onMounted(async () => {
+  const v = await getVersion()
+  serverVersion.value = v.version
+})
 
 const headerInfo = computed(() => {
   if (route.name === 'admin') {
@@ -50,6 +60,10 @@ const headerInfo = computed(() => {
       </nav>
       <div class="mt-auto pt-6">
         <LanguageSwitcher />
+        <div class="mt-4 text-xs text-muted-foreground/60">
+          <div>UI: v{{ clientVersion }}</div>
+          <div>API: v{{ serverVersion }}</div>
+        </div>
       </div>
     </aside>
     <main class="flex flex-1 flex-col min-w-0">

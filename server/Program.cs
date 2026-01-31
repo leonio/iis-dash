@@ -8,6 +8,7 @@ using Server.Features.Logs.Analytics;
 using Server.Features.Logs.Shared;
 using Server.Features.Logs.Upload;
 using Server.Features.Logs.Uploads;
+using Server.Features.Version;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,7 @@ builder.Services.AddAuthorization();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 
 builder.Services.AddDbContext<IisLogDbContext>(options =>
@@ -44,6 +46,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<IisLogDbContext>();
@@ -55,15 +60,12 @@ app.UseCors("ClientCors");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/api/hello", (HttpContext context) =>
-{
-    var name = context.User.Identity?.Name ?? "";
-    return Results.Text(name);
-}).RequireAuthorization();
-
+app.MapVersionEndpoints();
 app.MapLogPrecheckEndpoints();
 app.MapLogUploadEndpoints();
 app.MapLogUploadsEndpoints();
 app.MapLogAnalyticsEndpoints();
+
+app.MapFallbackToFile("index.html");
 
 app.Run();
