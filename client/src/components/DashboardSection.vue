@@ -154,11 +154,10 @@ const summaryCards = computed(() => {
   }
 
   const latency = metrics.value.latency
-  const errorRate = n(metrics.value.errorRate, 'percent')
 
   return [
     { label: t('summary.cards.totalRequests'), value: n(metrics.value.totalRequests) },
-    { label: t('summary.cards.errorRate'), value: n(metrics.value.errorRate) },
+    { label: t('summary.cards.errorRate'), value: n(metrics.value.errorRate, 'percent') },
     { label: t('summary.cards.p50'), value: (latency.p50Ms != null) ? n(latency.p50Ms) : '—' },
     { label: t('summary.cards.p95'), value: (latency.p95Ms != null) ? n(latency.p95Ms) : '—' },
     { label: t('summary.cards.p99'), value: (latency.p99Ms != null) ? n(latency.p99Ms) : '—' },
