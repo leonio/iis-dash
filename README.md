@@ -42,8 +42,23 @@ dotnet run
 Frontend: http://localhost:5173
 Backend: http://localhost:5039
 
+## Test log generation
+Generate sample IIS log files using the single-file C# script:
+
+```bash
+# defaults to W3C
+dotnet run --project gen-logdata.cs
+
+# IIS Log File Format (CSV)
+dotnet run --project gen-logdata.cs iis
+```
+
+This writes `iis-w3c.log` or `iis-csv.log` to the current directory.
+
 ## Endpoints
 - `GET /api/hello` → returns `User.Identity.Name` (requires NTLM)
+- `POST /api/logs/precheck` → multipart upload; reads first line and detects format
+- `POST /api/logs/upload` → multipart upload; ingests W3C or IIS Log File Format
 
 ## Frontend notes
 - Tailwind v4 is configured in `src/app.css` using CSS-first `@theme`.
@@ -53,6 +68,12 @@ Backend: http://localhost:5039
 ## Backend notes
 - NTLM/Windows auth is enabled via `Microsoft.AspNetCore.Authentication.Negotiate`.
 - CORS allows `http://localhost:5173` with credentials.
+- EF Core uses localdb with the `IisLogDb` connection string.
+- Log ingestion stores:
+	- `LogFile` (metadata + counts)
+	- `LogRawLine` (one row per line, includes parse status)
+	- `LogEntry` (parsed fields + normalized timestamp + original date/time text)
+- Per-file limit: 10MB (zip entries are validated individually).
 
 ## Troubleshooting
 - Ensure the backend is in a trusted zone for NTLM to flow to the browser.

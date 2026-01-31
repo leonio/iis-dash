@@ -1,59 +1,38 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { RouterLink, RouterView } from 'vue-router'
 import { Button } from '@/components/ui/button'
-import { VisXYContainer, VisArea } from '@unovis/vue'
-import { useApi } from '@/composables/useApi'
-
-interface ChartPoint {
-  x: number
-  y: number
-}
-
-const { getHello } = useApi()
-const helloResponse = ref('')
-const chartData = ref<ChartPoint[]>([
-  { x: 0, y: 12 },
-  { x: 1, y: 18 },
-  { x: 2, y: 10 },
-  { x: 3, y: 22 },
-])
-
-const handleHello = async () => {
-  helloResponse.value = await getHello()
-}
 </script>
 
 <template>
-  <main class="min-h-screen bg-background p-8 text-foreground">
-    <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Hello World</CardTitle>
-          <CardDescription>shadcn-vue + Tailwind v4 + Unovis</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div class="h-40 rounded-md border border-dashed border-muted-foreground/40">
-            <VisXYContainer :data="chartData" :height="160">
-              <VisArea :x="(d: ChartPoint) => d.x" :y="(d: ChartPoint) => d.y" />
-            </VisXYContainer>
+  <div class="min-h-screen bg-background text-foreground">
+    <div class="flex min-h-screen">
+      <aside class="w-64 border-r border-muted-foreground/20 bg-card px-5 py-6">
+        <div class="mb-8">
+          <h1 class="text-xl font-semibold text-foreground">IIS Dash</h1>
+          <p class="text-sm text-muted-foreground">Windows-authenticated insights.</p>
+        </div>
+        <nav class="flex flex-col gap-2">
+          <RouterLink to="/" class="no-underline">
+            <Button variant="outline" class="w-full justify-start">Dashboard</Button>
+          </RouterLink>
+          <RouterLink to="/admin" class="no-underline">
+            <Button variant="outline" class="w-full justify-start">Admin</Button>
+          </RouterLink>
+        </nav>
+      </aside>
+      <main class="flex-1">
+        <header class="border-b border-muted-foreground/20 bg-card">
+          <div class="mx-auto flex w-full max-w-6xl items-center justify-between px-8 py-5">
+            <div>
+              <h2 class="text-lg font-semibold text-foreground">Dashboard</h2>
+              <p class="text-sm text-muted-foreground">Monitor and manage your IIS logs.</p>
+            </div>
           </div>
-        </CardContent>
-        <CardFooter class="flex flex-col items-start gap-2">
-          <div class="flex items-center gap-2">
-            <Button type="button" @click="handleHello">Call /api/hello</Button>
-            <span class="text-sm text-muted-foreground">NTLM response below.</span>
-          </div>
-          <span v-if="helloResponse" class="text-sm text-foreground">{{ helloResponse }}</span>
-        </CardFooter>
-      </Card>
+        </header>
+        <div class="mx-auto w-full max-w-6xl px-8 py-8">
+          <RouterView />
+        </div>
+      </main>
     </div>
-  </main>
+  </div>
 </template>
