@@ -67,8 +67,8 @@ app.MapGet("/api/hello", (HttpContext context) =>
 
 app.MapGet("/api/version", () =>
 {
-    var assembly = System.Reflection.Assembly.GetEntryAssembly();
-    var version = assembly?.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?.InformationalVersion 
+    var assembly = Assembly.GetEntryAssembly();
+    var version = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
                   ?? assembly?.GetName().Version?.ToString() 
                   ?? "Unknown";
     return Results.Ok(new { Version = version });
