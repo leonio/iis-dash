@@ -221,11 +221,11 @@ const setDrilldown = async (label: string, filter: Partial<LogQueryFilter>) => {
   await loadAll()
 }
 
-const handleTrafficClick = async (bucketStart: string, requests: number) => {
+const handleTrafficClick = async (bucketStart: string, count: number) => {
   const start = bucketStart
   const end = new Date(new Date(bucketStart).getTime() + trafficBucketMinutes * 60 * 1000).toISOString()
   await setDrilldown(
-    `Traffic ${new Date(bucketStart).toLocaleString()} (${requests.toLocaleString()} reqs)`,
+    `Traffic ${new Date(bucketStart).toLocaleString()} (${count.toLocaleString()} reqs)`,
     { start, end },
   )
 }
@@ -495,7 +495,7 @@ onMounted(() => {
             <div v-if="!metrics" class="text-sm text-muted-foreground">No traffic data.</div>
             <div v-else class="space-y-2">
               <div class="text-xs text-muted-foreground">
-                Click a bucket to drill down by time.
+                Click a row to drill down by time.
               </div>
               <div class="space-y-1">
                 <div
@@ -506,7 +506,7 @@ onMounted(() => {
                   <button
                     type="button"
                     class="flex-1 rounded-sm bg-muted/30 p-1 text-left hover:bg-muted/50"
-                    @click="handleTrafficClick(point.bucketStart, point.requests)"
+                    @click="handleTrafficClick(point.bucketStart, point.count)"
                   >
                     <div
                       class="h-2 rounded-sm bg-primary/70"
@@ -515,7 +515,120 @@ onMounted(() => {
                   </button>
                   <span class="w-32 text-muted-foreground">{{ new Date(point.bucketStart).toLocaleString() }}</span>
                   <span class="w-16 text-right text-foreground">{{ point.requestsPerMinute.toFixed(2) }}</span>
-                  <span class="w-14 text-right text-muted-foreground">{{ point.requests }}</span>
+                  <span class="w-14 text-right text-muted-foreground">{{ point.count }}</span>
+                </div>
+              </div>
+
+              <div v-if="drilldown" class="space-y-2 pt-4">
+                <div class="text-sm font-medium text-foreground">Row details</div>
+                <div class="overflow-x-auto rounded-md border border-muted-foreground/20">
+                  <table class="min-w-full text-sm">
+                    <thead class="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
+                      <tr>
+                        <th class="px-3 py-2" :aria-sort="sortAria('timestamp')">
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            @click="toggleSort('timestamp')"
+                          >
+                            Timestamp
+                            <span class="text-[10px]">{{ sortIndicator('timestamp') }}</span>
+                          </button>
+                        </th>
+                        <th class="px-3 py-2" :aria-sort="sortAria('method')">
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            @click="toggleSort('method')"
+                          >
+                            Method
+                            <span class="text-[10px]">{{ sortIndicator('method') }}</span>
+                          </button>
+                        </th>
+                        <th class="px-3 py-2" :aria-sort="sortAria('endpoint')">
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            @click="toggleSort('endpoint')"
+                          >
+                            Endpoint
+                            <span class="text-[10px]">{{ sortIndicator('endpoint') }}</span>
+                          </button>
+                        </th>
+                        <th class="px-3 py-2" :aria-sort="sortAria('status')">
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            @click="toggleSort('status')"
+                          >
+                            Status
+                            <span class="text-[10px]">{{ sortIndicator('status') }}</span>
+                          </button>
+                        </th>
+                        <th class="px-3 py-2" :aria-sort="sortAria('latency')">
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            @click="toggleSort('latency')"
+                          >
+                            Latency
+                            <span class="text-[10px]">{{ sortIndicator('latency') }}</span>
+                          </button>
+                        </th>
+                        <th class="px-3 py-2" :aria-sort="sortAria('clientIp')">
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            @click="toggleSort('clientIp')"
+                          >
+                            Client IP
+                            <span class="text-[10px]">{{ sortIndicator('clientIp') }}</span>
+                          </button>
+                        </th>
+                        <th class="px-3 py-2" :aria-sort="sortAria('user')">
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            @click="toggleSort('user')"
+                          >
+                            User
+                            <span class="text-[10px]">{{ sortIndicator('user') }}</span>
+                          </button>
+                        </th>
+                        <th class="px-3 py-2" :aria-sort="sortAria('userAgent')">
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            @click="toggleSort('userAgent')"
+                          >
+                            User Agent
+                            <span class="text-[10px]">{{ sortIndicator('userAgent') }}</span>
+                          </button>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="entries.length === 0">
+                        <td colspan="8" class="px-3 py-4 text-center text-sm text-muted-foreground">
+                          No entries for the selected row.
+                        </td>
+                      </tr>
+                      <tr v-for="entry in sortedEntries" :key="entry.id" class="border-t border-muted-foreground/10">
+                        <td class="px-3 py-2 text-muted-foreground">
+                          {{ entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '—' }}
+                        </td>
+                        <td class="px-3 py-2 text-foreground">{{ entry.method ?? '—' }}</td>
+                        <td class="px-3 py-2 text-foreground">{{ entry.normalizedEndpoint }}</td>
+                        <td class="px-3 py-2 text-foreground">
+                          {{ entry.statusGroup }} ({{ entry.protocolStatus ?? '—' }})
+                        </td>
+                        <td class="px-3 py-2 text-foreground">{{ formatDuration(entry.timeTakenMs) }}</td>
+                        <td class="px-3 py-2 text-foreground">{{ entry.clientIp ?? '—' }}</td>
+                        <td class="px-3 py-2 text-foreground">{{ entry.username ?? '—' }}</td>
+                        <td class="px-3 py-2 text-foreground">{{ entry.userAgent ?? '—' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
