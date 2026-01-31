@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   Card,
@@ -66,7 +66,11 @@ const totalCount = ref(0)
 const page = ref(1)
 const pageSize = ref(50)
 const isLoading = ref(false)
+const isExporting = ref(false)
 const loadError = ref<string | null>(null)
+const overlayVisible = ref(false)
+let overlayTimer: number | undefined
+let overlayStart = 0
 
 const trafficBucketMinutes = 15
 
@@ -253,20 +257,25 @@ const handleHeatmapClick = async (endpoint: string, bucketIndex: number) => {
 }
 
 const exportChart = async (mode: ExportMode) => {
+  isExporting.value = true
   const filter = buildFilter()
-  const { blob, fileName } = await exportLogAnalytics({
-    filter,
-    topN: filters.topN,
-    includeOther: filters.includeOther,
-    mode,
-  })
+  try {
+    const { blob, fileName } = await exportLogAnalytics({
+      filter,
+      topN: filters.topN,
+      includeOther: filters.includeOther,
+      mode,
+    })
 
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  link.click()
-  URL.revokeObjectURL(url)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    link.click()
+    URL.revokeObjectURL(url)
+  } finally {
+    isExporting.value = false
+  }
 }
 
 const prevPage = async () => {
@@ -316,6 +325,41 @@ const sortAria = (key: SortKey) => {
   return sortState.direction === 'asc' ? 'ascending' : 'descending'
 }
 
+const isBusy = computed(() => isLoading.value || isExporting.value)
+
+const clearOverlayTimer = () => {
+  if (overlayTimer !== undefined) {
+    window.clearTimeout(overlayTimer)
+    overlayTimer = undefined
+  }
+}
+
+watch(isBusy, (busy) => {
+  if (busy) {
+    clearOverlayTimer()
+    overlayStart = Date.now()
+    overlayVisible.value = true
+    return
+  }
+
+  const elapsed = Date.now() - overlayStart
+  const remaining = Math.max(0, 300 - elapsed)
+  clearOverlayTimer()
+  if (remaining === 0) {
+    overlayVisible.value = false
+    return
+  }
+
+  overlayTimer = window.setTimeout(() => {
+    overlayVisible.value = false
+    overlayTimer = undefined
+  }, remaining)
+})
+
+onUnmounted(() => {
+  clearOverlayTimer()
+})
+
 onMounted(() => {
   void loadAll()
 })
@@ -323,6 +367,15 @@ onMounted(() => {
 
 <template>
   <section class="space-y-6">
+    <div
+      v-if="overlayVisible"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm"
+    >
+      <div class="flex items-center gap-3 rounded-md border border-muted-foreground/20 bg-card px-4 py-3 text-sm text-foreground shadow">
+        <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/40 border-t-primary" />
+        Loading…
+      </div>
+    </div>
     <div class="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_340px]">
       <div class="space-y-6">
         <Card>
@@ -433,8 +486,8 @@ onMounted(() => {
                 <CardTitle>Traffic (requests/min)</CardTitle>
                 <CardDescription>{{ trafficBucketMinutes }}-minute buckets</CardDescription>
               </div>
-              <Button type="button" variant="outline" size="sm" @click="exportChart('Traffic')">
-                Export
+              <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Traffic')">
+                {{ isExporting ? 'Exporting…' : 'Export' }}
               </Button>
             </div>
           </CardHeader>
@@ -476,8 +529,8 @@ onMounted(() => {
                 <CardTitle>Status distribution</CardTitle>
                 <CardDescription>Grouped by 2xx/3xx/4xx/5xx.</CardDescription>
               </div>
-              <Button type="button" variant="outline" size="sm" @click="exportChart('Status')">
-                Export
+              <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Status')">
+                {{ isExporting ? 'Exporting…' : 'Export' }}
               </Button>
             </div>
           </CardHeader>
@@ -515,8 +568,8 @@ onMounted(() => {
                 <CardTitle>Latency percentiles</CardTitle>
                 <CardDescription>Average and $p$-values for the selected range.</CardDescription>
               </div>
-              <Button type="button" variant="outline" size="sm" @click="exportChart('Latency')">
-                Export
+              <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Latency')">
+                {{ isExporting ? 'Exporting…' : 'Export' }}
               </Button>
             </div>
           </CardHeader>
@@ -558,8 +611,8 @@ onMounted(() => {
                 <CardTitle>Endpoint usage heatmap</CardTitle>
                 <CardDescription>15-minute buckets by time-of-day.</CardDescription>
               </div>
-              <Button type="button" variant="outline" size="sm" @click="exportChart('Heatmap')">
-                Export
+              <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Heatmap')">
+                {{ isExporting ? 'Exporting…' : 'Export' }}
               </Button>
             </div>
           </CardHeader>
@@ -615,8 +668,8 @@ onMounted(() => {
                 <CardTitle>Detail panel</CardTitle>
                 <CardDescription>Summary metrics and raw entries.</CardDescription>
               </div>
-              <Button type="button" variant="outline" size="sm" @click="exportChart('Entries')">
-                Export entries
+              <Button type="button" variant="outline" size="sm" :disabled="isExporting" @click="exportChart('Entries')">
+                {{ isExporting ? 'Exporting…' : 'Export entries' }}
               </Button>
             </div>
           </CardHeader>
@@ -852,8 +905,8 @@ onMounted(() => {
               <Button type="button" :disabled="isLoading" @click="applyFilters">
                 {{ isLoading ? 'Refreshing…' : 'Apply filters' }}
               </Button>
-              <Button type="button" variant="outline" @click="exportChart('All')">
-                Export all charts
+              <Button type="button" variant="outline" :disabled="isExporting" @click="exportChart('All')">
+                {{ isExporting ? 'Exporting…' : 'Export all charts' }}
               </Button>
             </div>
           </CardContent>
