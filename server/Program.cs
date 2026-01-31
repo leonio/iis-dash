@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Features.Logs.Precheck;
+using Server.Features.Logs.Analytics;
 using Server.Features.Logs.Shared;
 using Server.Features.Logs.Upload;
 using Server.Features.Logs.Uploads;
@@ -63,5 +64,6 @@ app.MapGet("/api/hello", (HttpContext context) =>
 app.MapLogPrecheckEndpoints();
 app.MapLogUploadEndpoints();
 app.MapLogUploadsEndpoints();
+app.MapLogAnalyticsEndpoints();
 
 app.Run();

@@ -7,6 +7,10 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      redirect: '/dashboard',
+    },
+    {
+      path: '/dashboard/:section(traffic|status|latency|heatmap|details|summary)?',
       name: 'dashboard',
       component: DashboardView,
     },
