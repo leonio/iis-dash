@@ -10,11 +10,11 @@ public static class GetVersion
     {
         app.MapGet("/api/version", () =>
         {
-            var assembly = Assembly.GetEntryAssembly();
-            var version = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-                          ?? assembly?.GetName().Version?.ToString()
-                          ?? "Unknown";
-            return Results.Ok(new Response(version));
+    var assembly = Assembly.GetEntryAssembly();
+    var version = assembly?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
+                  ?? assembly?.GetName().Version?.ToString() 
+                  ?? "Unknown";
+    return Results.Ok(new { Version = version });
         });
     }
 }
