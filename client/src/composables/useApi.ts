@@ -144,19 +144,6 @@ export function useApi() {
     return { blob, fileName }
   }
 
-  return {
-    baseUrl,
-    getHello,
-    precheckLogFile,
-    uploadLogFiles,
-    getUploads,
-    getLogMetrics,
-    getHeatmap,
-    getLogEntries,
-    exportLogAnalytics,
-    getVersion,
-  }
-
   async function getVersion() {
     try {
       const response = await fetch(`${baseUrl.value}/api/version`, {
@@ -169,6 +156,19 @@ export function useApi() {
       console.error('Failed to fetch server version', e)
     }
     return { version: 'Unknown' }
+  }
+
+  return {
+    baseUrl,
+    getHello,
+    precheckLogFile,
+    uploadLogFiles,
+    getUploads,
+    getLogMetrics,
+    getHeatmap,
+    getLogEntries,
+    exportLogAnalytics,
+    getVersion,
   }
 }
 
