@@ -8,6 +8,7 @@ using Server.Features.Logs.Analytics;
 using Server.Features.Logs.Shared;
 using Server.Features.Logs.Upload;
 using Server.Features.Logs.Uploads;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +45,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<IisLogDbContext>();
@@ -61,9 +65,20 @@ app.MapGet("/api/hello", (HttpContext context) =>
     return Results.Text(name);
 }).RequireAuthorization();
 
+app.MapGet("/api/version", () =>
+{
+    var assembly = System.Reflection.Assembly.GetEntryAssembly();
+    var version = assembly?.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?.InformationalVersion 
+                  ?? assembly?.GetName().Version?.ToString() 
+                  ?? "Unknown";
+    return Results.Ok(new { Version = version });
+});
+
 app.MapLogPrecheckEndpoints();
 app.MapLogUploadEndpoints();
 app.MapLogUploadsEndpoints();
 app.MapLogAnalyticsEndpoints();
+
+app.MapFallbackToFile("index.html");
 
 app.Run();

@@ -1,7 +1,8 @@
 import { ref } from 'vue'
 
 export function useApi() {
-  const baseUrl = ref('http://localhost:5039')
+  const isDev = import.meta.env.DEV
+  const baseUrl = ref(isDev ? 'http://localhost:5039' : '')
 
   async function getHello() {
     const response = await fetch(`${baseUrl.value}/api/hello`, {
@@ -153,6 +154,21 @@ export function useApi() {
     getHeatmap,
     getLogEntries,
     exportLogAnalytics,
+    getVersion,
+  }
+
+  async function getVersion() {
+    try {
+      const response = await fetch(`${baseUrl.value}/api/version`, {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        return (await response.json()) as { version: string }
+      }
+    } catch (e) {
+      console.error('Failed to fetch server version', e)
+    }
+    return { version: 'Unknown' }
   }
 }
 

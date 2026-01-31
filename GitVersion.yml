@@ -1,0 +1,15 @@
+workflow: TrunkBased/preview1
+
+# Regex to match Conventional Commits
+major-version-bump-message: '(BREAKING CHANGE|MAJOR):'
+minor-version-bump-message: 'feat(\([a-z ]+\))?:'
+patch-version-bump-message: 'fix(\([a-z ]+\))?:'
+
+branches:
+  main:
+    # Ensure standard main branch regex
+    regex: ^main$
+    increment: Patch
+    
+ignore:
+  sha: []
