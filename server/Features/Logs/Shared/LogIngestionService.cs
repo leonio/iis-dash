@@ -113,8 +113,8 @@ public sealed class LogIngestionService
             UploadedAt = DateTimeOffset.UtcNow,
         };
 
-        var rawLines = new List<LogRawLine>();
-        var entries = new List<LogEntry>();
+        List<LogRawLine> rawLines = [];
+        List<LogEntry> entries = [];
         var failedLines = 0;
         var skippedLines = 0;
 
@@ -186,8 +186,17 @@ public sealed class LogIngestionService
         {
             if (line.StartsWith("#Fields:", StringComparison.OrdinalIgnoreCase))
             {
-                var fields = line[8..].Trim();
-                state.W3cFields = fields.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+                var fields = line.AsSpan(8).Trim();
+                List<string> fieldList = [];
+                foreach (var range in fields.Split(' '))
+                {
+                    var fieldSlice = fields[range].Trim();
+                    if (!fieldSlice.IsEmpty)
+                    {
+                        fieldList.Add(fieldSlice.ToString());
+                    }
+                }
+                state.W3cFields = fieldList;
             }
 
             return ParseResult.Skipped();
@@ -198,8 +207,14 @@ public sealed class LogIngestionService
             return ParseResult.Failed("Missing #Fields header.");
         }
 
-        var parts = line.Split(' ', StringSplitOptions.None);
-        if (parts.Length != state.W3cFields.Count)
+        var span = line.AsSpan();
+        var partCount = 0;
+        foreach (var _ in span.Split(' '))
+        {
+            partCount++;
+        }
+
+        if (partCount != state.W3cFields.Count)
         {
             return ParseResult.Failed("Field count does not match #Fields header.");
         }
@@ -208,11 +223,14 @@ public sealed class LogIngestionService
         string? dateText = null;
         string? timeText = null;
 
-        for (var i = 0; i < parts.Length; i++)
+        var i = 0;
+        foreach (var range in span.Split(' '))
         {
+            var valueSpan = span[range];
             var fieldName = state.W3cFields[i];
-            var value = NormalizeValue(parts[i]);
+            var value = NormalizeValue(valueSpan);
             ApplyW3cField(entry, fieldName, value, ref dateText, ref timeText);
+            i++;
         }
 
         ApplyTimestamp(entry, dateText, timeText);
@@ -224,9 +242,10 @@ public sealed class LogIngestionService
 
     private static ParseResult ParseIisLine(string line, ParserState state)
     {
+        var lineSpan = line.AsSpan();
         if (!state.IisHeaderInitialized)
         {
-            var headerValues = CsvParser.ParseLine(line);
+            var headerValues = CsvParser.ParseLine(lineSpan);
             if (IsIisHeader(headerValues))
             {
                 state.IisHeaderInitialized = true;
@@ -235,10 +254,10 @@ public sealed class LogIngestionService
             }
 
             state.IisHeaderInitialized = true;
-            state.IisFields = DefaultIisFields.ToList();
+            state.IisFields = [.. DefaultIisFields];
         }
 
-        var values = CsvParser.ParseLine(line);
+        var values = CsvParser.ParseLine(lineSpan);
         if (values.Count != state.IisFields.Count)
         {
             return ParseResult.Failed("Field count does not match IIS header.");
@@ -437,15 +456,17 @@ public sealed class LogIngestionService
         }
     }
 
-    private static string? NormalizeValue(string? value)
+    private static string? NormalizeValue(ReadOnlySpan<char> value)
     {
-        if (string.IsNullOrWhiteSpace(value) || value == "-")
+        if (value.IsWhiteSpace() || (value.Length == 1 && value[0] == '-'))
         {
             return null;
         }
 
-        return value;
+        return value.ToString();
     }
+
+    private static string? NormalizeValue(string? value) => NormalizeValue(value.AsSpan());
 
     private static int? TryParseInt(string? value)
     {
@@ -486,9 +507,9 @@ public sealed class LogIngestionService
     private sealed class ParserState(LogFormat format, string firstLine)
     {
         public LogFormat Format { get; } = format;
-        public List<string> W3cFields { get; set; } = new();
+        public List<string> W3cFields { get; set; } = [];
         public bool IisHeaderInitialized { get; set; }
-        public List<string> IisFields { get; set; } = new();
+        public List<string> IisFields { get; set; } = [];
         public string FirstLine { get; } = firstLine;
     }
 
@@ -538,7 +559,7 @@ public sealed class LogIngestionService
         public int ParsedLines { get; set; }
         public int FailedLines { get; set; }
         public int SkippedLines { get; set; }
-        public List<IngestionFileResult> FileResults { get; set; } = new();
+        public List<IngestionFileResult> FileResults { get; set; } = [];
     }
 
     public sealed record IngestionFileResult(
