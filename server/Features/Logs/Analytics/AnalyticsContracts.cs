@@ -74,7 +74,7 @@ internal sealed record LogEntrySnapshot(
     string? UserAgent,
     long LogFileId)
 {
-    public string NormalizedEndpoint => EndpointNormalizer.Normalize(UriStem, UriQuery);
+    public string NormalizedEndpoint => EndpointNormalizer.Normalize(UriStem);
 }
 
 internal enum ExportMode

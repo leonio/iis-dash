@@ -68,7 +68,7 @@ internal static class LogAnalyticsQuery
         if (!string.IsNullOrWhiteSpace(filter.Endpoint))
         {
             var normalized = EndpointNormalizer.Normalize(filter.Endpoint);
-            entries = entries.Where(entry => EndpointNormalizer.Normalize(entry.UriStem, entry.UriQuery) == normalized);
+            entries = entries.Where(entry => EndpointNormalizer.Normalize(entry.UriStem) == normalized);
         }
 
         if (filter.TimeOfDayStartMinutes.HasValue && filter.TimeOfDayEndMinutes.HasValue)
@@ -88,7 +88,7 @@ internal static class LogAnalyticsQuery
         if (!string.IsNullOrWhiteSpace(filter.Endpoint))
         {
             var normalized = EndpointNormalizer.Normalize(filter.Endpoint);
-            entries = entries.Where(entry => EndpointNormalizer.Normalize(entry.UriStem, entry.UriQuery) == normalized);
+            entries = entries.Where(entry => EndpointNormalizer.Normalize(entry.UriStem) == normalized);
         }
 
         if (filter.TimeOfDayStartMinutes.HasValue && filter.TimeOfDayEndMinutes.HasValue)
@@ -131,7 +131,7 @@ internal static class LogAnalyticsQuery
     public static LogEntryDto MapToDto(LogEntrySnapshot entry)
     {
         var endpoint = BuildEndpoint(entry.UriStem, entry.UriQuery);
-        var normalized = EndpointNormalizer.Normalize(entry.UriStem, entry.UriQuery);
+        var normalized = EndpointNormalizer.Normalize(entry.UriStem);
         var statusGroup = GetStatusGroup(entry.ProtocolStatus);
 
         return new LogEntryDto(
@@ -154,7 +154,7 @@ internal static class LogAnalyticsQuery
     public static LogEntryDto MapToDto(LogEntry entry)
     {
         var endpoint = BuildEndpoint(entry.UriStem, entry.UriQuery);
-        var normalized = EndpointNormalizer.Normalize(entry.UriStem, entry.UriQuery);
+        var normalized = EndpointNormalizer.Normalize(entry.UriStem);
         var statusGroup = GetStatusGroup(entry.ProtocolStatus);
 
         return new LogEntryDto(

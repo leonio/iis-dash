@@ -4,7 +4,7 @@ namespace Server.Features.Logs.Shared;
 
 public static partial class EndpointNormalizer
 {
-    public static string Normalize(string? uriStem, string? uriQuery = null) => Normalize(uriStem.AsSpan());
+    public static string Normalize(string? uriStem) => Normalize(uriStem.AsSpan());
 
     public static string Normalize(ReadOnlySpan<char> uriStem)
     {
