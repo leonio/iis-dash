@@ -36,7 +36,7 @@ if (format == "w3c")
         var endpoint = endpoints[random.Next(endpoints.Length)];
         var uriStem = endpoint.Split('?', StringSplitOptions.RemoveEmptyEntries)[0];
         var uriQuery = endpoint.Contains('?') ? endpoint.Split('?', StringSplitOptions.RemoveEmptyEntries).Last() : "-";
-        var status = Pick(new[] { 200, 200, 200, 304, 400, 401, 403, 404, 500 }, random);
+        var status = Pick([200, 200, 200, 304, 400, 401, 403, 404, 500], random);
         var subStatus = status == 500 ? 0 : random.Next(0, 10);
         var win32 = status == 500 ? 123 : 0;
         var bytesSent = random.Next(512, 150000);
@@ -49,15 +49,15 @@ if (format == "w3c")
             "PostmanRuntime/7.37.0",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         }, random);
-        var referer = Pick(new[] { "-", "http://localhost:5173/", "http://intranet/dashboard" }, random);
+        var referer = Pick(["-", "http://localhost:5173/", "http://intranet/dashboard"], random);
 
         writer.WriteLine(string.Join(' ', new[]
         {
             timestamp.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             timestamp.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
             RandomIp(random),
-            Pick(new[] { "-", "DOMAIN\\user1", "DOMAIN\\user2" }, random),
-            Pick(new[] { "GET", "POST", "PUT" }, random),
+            Pick(["-", "DOMAIN\\user1", "DOMAIN\\user2"], random),
+            Pick(["GET", "POST", "PUT"], random),
             uriStem,
             uriQuery,
             status.ToString(CultureInfo.InvariantCulture),
@@ -118,31 +118,31 @@ if (format == "iis")
         var endpoint = endpoints[random.Next(endpoints.Length)];
         var uriStem = endpoint.Split('?', StringSplitOptions.RemoveEmptyEntries)[0];
         var uriQuery = endpoint.Contains('?') ? endpoint.Split('?', StringSplitOptions.RemoveEmptyEntries).Last() : string.Empty;
-        var status = Pick(new[] { 200, 200, 200, 304, 400, 401, 403, 404, 500 }, random);
+        var status = Pick([200, 200, 200, 304, 400, 401, 403, 404, 500], random);
         var win32 = status == 500 ? 123 : 0;
         var bytesSent = random.Next(512, 150000);
         var bytesRecv = random.Next(0, 4096);
         var timeTaken = random.Next(1, 4000);
-        var userAgent = Pick(new[]
-        {
+        var userAgent = Pick(
+        [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
             "curl/8.5.0",
             "PostmanRuntime/7.37.0",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        }, random);
-        var referer = Pick(new[] { "", "http://localhost:5173/", "http://intranet/dashboard" }, random);
+        ], random);
+        var referer = Pick(["", "http://localhost:5173/", "http://intranet/dashboard"], random);
 
         writer.WriteLine(string.Join(',', new[]
         {
             timestamp.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture),
             timestamp.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
             RandomIp(random),
-            Pick(new[] { "", "DOMAIN\\user1", "DOMAIN\\user2" }, random),
+            Pick(["", "DOMAIN\\user1", "DOMAIN\\user2"], random),
             "W3SVC1",
             "IIS-SERVER",
             "10.0.0.1",
             "443",
-            Pick(new[] { "GET", "POST", "PUT" }, random),
+            Pick(["GET", "POST", "PUT"], random),
             uriStem,
             uriQuery,
             status.ToString(CultureInfo.InvariantCulture),
@@ -153,7 +153,7 @@ if (format == "iis")
             "HTTP/1.1",
             "localhost",
             QuoteCsv(userAgent),
-            "",
+            string.Empty,
             QuoteCsv(referer),
         }));
     }

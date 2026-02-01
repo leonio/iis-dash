@@ -47,13 +47,13 @@ Generate sample IIS log files using the single-file C# script:
 
 ```bash
 # defaults to W3C
-dotnet run --project gen-logdata.cs
+dotnet run --project tools/gen-logdata.cs
 
 # IIS Log File Format (CSV)
-dotnet run --project gen-logdata.cs iis
+dotnet run --project tools/gen-logdata.cs iis
 ```
 
-This writes `iis-w3c.log` or `iis-csv.log` to the current directory.
+This writes `iis-w3c-yyyyMMdd-HHmmss.log` or `iis-csv-yyyyMMdd-HHmmss.log` to the current directory.
 
 ## Endpoints
 - `GET /api/hello` → returns `User.Identity.Name` (requires NTLM)
