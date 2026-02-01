@@ -4,51 +4,49 @@ namespace Server.Features.Logs.Shared;
 
 public static partial class EndpointNormalizer
 {
-    private static readonly char[] SegmentSeparator = ['/'];
+    public static string Normalize(string? uriStem) => Normalize(uriStem.AsSpan());
 
-    public static string Normalize(string? uriStem, string? uriQuery = null)
+    public static string Normalize(ReadOnlySpan<char> uriStem)
     {
-        if (string.IsNullOrWhiteSpace(uriStem))
+        uriStem = uriStem.Trim();
+        if (uriStem.IsEmpty)
         {
             return "/";
         }
 
-        var path = uriStem.Trim();
-        var queryIndex = path.IndexOf('?', StringComparison.Ordinal);
+        var queryIndex = uriStem.IndexOf('?');
         if (queryIndex >= 0)
         {
-            path = path[..queryIndex];
+            uriStem = uriStem[..queryIndex];
         }
 
-        if (!path.StartsWith('/'))
+        List<string> segments = [];
+        foreach (var range in uriStem.Split('/'))
         {
-            path = "/" + path;
-        }
-
-        var segments = path.Split(SegmentSeparator, StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length == 0)
-        {
-            return "/";
-        }
-
-        for (var i = 0; i < segments.Length; i += 1)
-        {
-            var segment = segments[i];
-            if (Guid.TryParse(segment, out _))
+            var segment = uriStem[range];
+            if (segment.IsEmpty)
             {
-                segments[i] = ":id";
                 continue;
             }
 
-            if (NumericSegmentRegex().IsMatch(segment))
+            if (Guid.TryParse(segment, out _) || NumericSegmentRegex().IsMatch(segment))
             {
-                segments[i] = ":id";
+                segments.Add(":id");
             }
+            else
+            {
+                segments.Add(segment.ToString());
+            }
+        }
+
+        if (segments.Count == 0)
+        {
+            return "/";
         }
 
         return "/" + string.Join('/', segments);
     }
 
-    [GeneratedRegex("^\\d+$")]
+    [GeneratedRegex(@"^\d+$")]
     private static partial Regex NumericSegmentRegex();
 }
