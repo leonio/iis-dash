@@ -60,7 +60,7 @@ public static class CsvParser
             return field.ToString();
         }
 
-        // StringBuilder is OK, but only needed it we have to do deal with stripping quotes and all that...
+        // StringBuilder is OK, but only needed if we have to deal with stripping quotes and all that...
         var builder = new StringBuilder(field.Length);
         var inQuotes = false;
 
