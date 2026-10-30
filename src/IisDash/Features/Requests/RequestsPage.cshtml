@@ -1,0 +1,133 @@
+@inherits RazorSlice<RequestsPage.Args>
+@implements IUsesLayout<Layout, Layout.Args>
+@* Every request that matches the filter, newest first or sorted by any column (over all of them, in SQLite), fifty to
+   a page. A row opens the request in the slide-in panel. *@
+@{
+    var d = Model.Data;
+    var f = Ui.Filter;
+    long firstRow = (long)(d.Page - 1) * RequestsQuery.PageSize + 1;
+    long lastRow = Math.Min(d.Total, firstRow + d.Rows.Count - 1);
+}
+<div class="id-page">
+  <div class="id-page-head">
+    <div>
+      <h1>@Ui.T("requests.title")</h1>
+      <p class="uk-text-meta">@Ui.T("requests.intro")</p>
+    </div>
+    @if (d.Total > 0)
+    {
+      <div class="uk-flex uk-flex-middle id-gap-s">
+        <a @Go(f.Url("/")) class="uk-button uk-button-default">@Icon("chart", "id-icon-s") @Ui.T("requests.see_dashboard")</a>
+        @await RenderPartialAsync(IisDash.Features.Export.ExportMenu.Create())
+      </div>
+    }
+  </div>
+
+  @if (Model.Options.HasData)
+  {
+    @await RenderPartialAsync(FilterBar.Create(new FilterBar.Args
+    {
+        Action = "/requests",
+        Options = Model.Options,
+        Keep = Ui.Here.Contains("sort=") ? [("sort", d.Sort), ("dir", d.Descending ? "desc" : "asc")] : [],
+    }))
+  }
+
+  <section class="uk-card uk-card-default" aria-labelledby="requests-count">
+    <div class="id-panel-head">
+      <div>
+        <h2 id="requests-count" class="uk-card-title">
+          @if (d.Total == 0) { @Ui.T("requests.none") }
+          else { @Ui.T("requests.showing", new { from = Ui.F.N(firstRow), to = Ui.F.N(lastRow), total = Ui.F.N(d.Total) }) }
+        </h2>
+      </div>
+    </div>
+    @if (d.Total > 0)
+    {
+      <div class="id-panel-body id-panel-body-flush id-table-wrap">
+        <table class="uk-table uk-table-small uk-table-divider uk-table-middle id-rows">
+          <thead>
+            <tr>
+              <th aria-sort="@AriaSort("time")">@SortHead("time", "requests.time")</th>
+              <th aria-sort="@AriaSort("method")">@SortHead("method", "requests.method")</th>
+              <th aria-sort="@AriaSort("path")">@SortHead("path", "requests.path")</th>
+              <th aria-sort="@AriaSort("status")">@SortHead("status", "requests.status")</th>
+              <th class="id-num" aria-sort="@AriaSort("ms")">@SortHead("ms", "requests.ms")</th>
+              <th class="id-num" aria-sort="@AriaSort("size")">@SortHead("size", "requests.size")</th>
+              <th aria-sort="@AriaSort("client")">@SortHead("client", "requests.client")</th>
+              <th aria-sort="@AriaSort("user")">@SortHead("user", "requests.user")</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var r in d.Rows)
+            {
+              <tr>
+                <td class="id-nums uk-text-muted">@Ui.F.When(r.Ts)</td>
+                <td class="id-mono id-xsmall">@r.Method</td>
+                <td class="id-cell-path">
+                  <a class="id-path id-row-link" @Sheet($"/requests/{r.Id}", Ui.T("request.title")) title="@r.UriStem@(r.UriQuery is null ? "" : "?" + r.UriQuery)">@PathAndQuery(r.UriStem, r.UriQuery)</a>
+                </td>
+                <td><span class="id-status @StatusTone(r.Status)">@(r.Status?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "–")@if (r.SubStatus is > 0) { <text>.@r.SubStatus</text> }</span></td>
+                <td class="id-num @(r.TimeTakenMs >= 1000 ? "uk-text-warning" : null)">@Ui.F.Ms(r.TimeTakenMs)</td>
+                <td class="id-num uk-text-muted">@Ui.F.Bytes(r.BytesSent)</td>
+                <td class="id-mono id-xsmall">@r.ClientIp</td>
+                <td class="id-xsmall uk-text-muted">@r.Username</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (d.Pages > 1)
+      {
+        <nav class="id-pager" aria-label="@Ui.T("requests.pages")">
+          <span class="uk-text-meta">@Ui.T("requests.page", new { page = Ui.F.N(d.Page), pages = Ui.F.N(d.Pages) })</span>
+          <div class="uk-flex id-gap-s">
+            @if (d.Page > 1)
+            {
+              <a class="uk-button uk-button-default uk-button-small" @Go(Link(d.Sort, d.Descending, 1))>@Ui.T("requests.first")</a>
+              <a class="uk-button uk-button-default uk-button-small" @Go(Link(d.Sort, d.Descending, d.Page - 1)) rel="prev">@Icon("chevron-left", "id-icon-s") @Ui.T("requests.previous")</a>
+            }
+            @if (d.Page < d.Pages)
+            {
+              <a class="uk-button uk-button-default uk-button-small" @Go(Link(d.Sort, d.Descending, d.Page + 1)) rel="next">@Ui.T("requests.next") @Icon("chevron-right", "id-icon-s")</a>
+            }
+          </div>
+        </nav>
+      }
+    }
+    else
+    {
+      <div class="id-panel-body">
+        <p class="uk-text-muted">@(Model.Options.HasData ? Ui.T("dashboard.none_text") : Ui.T("dashboard.empty_text"))</p>
+      </div>
+    }
+  </section>
+</div>
+
+@functions {
+    public Layout.Args LayoutModel => new() { Title = Ui.T("requests.title"), Section = "requests" };
+
+    private string Link(string sort, bool descending, int page)
+    {
+        var parts = new List<string>();
+        string query = Ui.Filter.Query();
+        if (query.Length > 0) parts.Add(query);
+        if (sort != "time" || !descending) parts.Add($"sort={sort}&dir={(descending ? "desc" : "asc")}");
+        if (page > 1) parts.Add("page=" + page.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return parts.Count == 0 ? "/requests" : "/requests?" + string.Join('&', parts);
+    }
+
+    private string? AriaSort(string key) =>
+        Model.Data.Sort == key ? (Model.Data.Descending ? "descending" : "ascending") : null;
+
+    private IHtmlContent SortHead(string key, string label)
+    {
+        var d = Model.Data;
+        bool current = d.Sort == key;
+        bool descending = current ? !d.Descending : RequestsQuery.Sorts[key].Descending;
+        <a class="id-sort @(current ? "id-sorted" : null)" @Go(Link(key, descending, 1))>
+          @Ui.T(label) @Icon(current ? (d.Descending ? "sort-desc" : "sort-asc") : "sort")
+        </a>
+        return HtmlString.Empty;
+    }
+}

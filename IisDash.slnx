@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/IisDash/IisDash.csproj" />
+  <Project Path="tests/IisDash.Tests/IisDash.Tests.csproj" />
+</Solution>

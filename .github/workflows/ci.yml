@@ -1,4 +1,8 @@
-name: CI/CD - IIS Dashboard 
+name: CI/CD - IIS Dashboard
+
+# Every push and pull request: the tests, and the native build for Linux and Windows (each built on its own OS, as
+# native compilation does not cross operating systems), and the container image. On main, also: a GitHub release with
+# the two executables, and the image pushed to GitHub's container registry.
 
 on:
   push:
@@ -9,11 +13,17 @@ on:
 
 permissions:
   contents: write
-  id-token: write
+  packages: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  build-and-release:
+  version:
     runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gitversion.outputs.semVer }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,43 +40,108 @@ jobs:
         with:
           useConfigFile: true
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          node-version: 22
+          dotnet-version: 10.0.x
+      - name: Test
+        run: dotnet test
 
-      - name: Install & Build Client
-        working-directory: ./client
-        run: |
-          npm ci
-          VITE_APP_VERSION=${{ steps.gitversion.outputs.semVer }} npm run build
-        # Output is now in client/dist
-
-      # 3. Build Backend (Server)
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+  native:
+    needs: [ version, test ]
+    strategy:
+      matrix:
+        include:
+          # 22.04 rather than the latest: a native Linux executable needs the glibc it was built against or newer,
+          # so building on the older one runs on more distributions.
+          - os: ubuntu-22.04
+            rid: linux-x64
+            exe: iis-dash
+          - os: windows-latest
+            rid: win-x64
+            exe: iis-dash.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
-      - name: Publish .NET Server
-        run: |
-          dotnet publish server/server.csproj -c Release -o ./publish /p:Version=${{ steps.gitversion.outputs.semVer }}
+      - name: Publish (native, one file)
+        shell: bash
+        run: dotnet publish src/IisDash -c Release -r ${{ matrix.rid }} -o out -p:Version=${{ needs.version.outputs.semVer }}
 
-      - name: Integrate Client
+      - name: Smoke test
+        shell: bash
         run: |
-          mkdir -p ./publish/wwwroot
-          cp -r client/dist/* ./publish/wwwroot/
+          IISDASH_DATA="$RUNNER_TEMP/data" ASPNETCORE_URLS=http://127.0.0.1:5080 ./out/${{ matrix.exe }} &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:5080/healthz && break; sleep 1; done
+          curl -sf http://127.0.0.1:5080/ | grep -q "IIS Dash"
+          kill %1
 
-      - name: Create Zip Release
+      - name: Name for the release
+        shell: bash
         run: |
-          cd publish
-          zip -r ../iis-dash-v${{ steps.gitversion.outputs.semVer }}.zip .
+          mkdir dist
+          ext=""; [[ "${{ matrix.exe }}" == *.exe ]] && ext=".exe"
+          cp out/${{ matrix.exe }} dist/iis-dash-${{ needs.version.outputs.semVer }}-${{ matrix.rid }}$ext
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iis-dash-${{ matrix.rid }}
+          path: dist/*
+
+  container:
+    needs: [ version, test ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # The SDK builds the image itself (no Dockerfile): the native executable on .NET's chiseled runtime-deps image.
+      - name: Build the image
+        if: github.ref != 'refs/heads/main'
+        run: >
+          dotnet publish src/IisDash -c Release -r linux-x64 -t:PublishContainer
+          -p:Version=${{ needs.version.outputs.semVer }}
+          -p:ContainerArchiveOutputPath=$RUNNER_TEMP/iis-dash.tar.gz
+
+      - name: Log in to the GitHub container registry
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image
+        if: github.ref == 'refs/heads/main'
+        run: >
+          dotnet publish src/IisDash -c Release -r linux-x64 -t:PublishContainer
+          -p:Version=${{ needs.version.outputs.semVer }}
+          -p:ContainerRegistry=ghcr.io
+          -p:ContainerRepository=${GITHUB_REPOSITORY_OWNER,,}/iis-dash
+          -p:ContainerImageTags='"${{ needs.version.outputs.semVer }};latest"'
+
+  release:
+    if: github.ref == 'refs/heads/main'
+    needs: [ version, native, container ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Create GitHub Release
-        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.gitversion.outputs.semVer }}
-          name: Release v${{ steps.gitversion.outputs.semVer }}
-          files: iis-dash-v${{ steps.gitversion.outputs.semVer }}.zip
+          tag_name: v${{ needs.version.outputs.semVer }}
+          name: Release v${{ needs.version.outputs.semVer }}
+          files: dist/*
           generate_release_notes: true

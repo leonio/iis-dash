@@ -1,0 +1,48 @@
+@inherits RazorSlice<Heatmap>
+@* When each of the busiest endpoints is busy: endpoints down, the hours of the day across, darker for more requests
+   (on a square-root scale, so quiet hours still show against a busy peak). A cell links to the page filtered to that
+   endpoint and hour, a row's name to that endpoint. *@
+@{
+    var f = Ui.Filter;
+    long max = Model.Max;
+}
+<section class="uk-card uk-card-default id-panel" aria-labelledby="heat-title">
+  <div class="id-panel-head">
+    <div>
+      <h2 id="heat-title" class="uk-card-title">@Ui.T("heatmap.title")</h2>
+      <p class="uk-text-meta">@Ui.T("heatmap.hint")</p>
+    </div>
+    <div class="id-heat-scale" aria-hidden="true"><span>@Ui.T("heatmap.fewer")</span><i></i><span>@Ui.T("heatmap.more")</span></div>
+  </div>
+  <div class="id-panel-body">
+    <div class="id-heatmap" role="table" aria-label="@Ui.T("heatmap.title")">
+      <div role="row" style="display: contents">
+        <span role="columnheader"></span>
+        @for (int h = 0; h < 24; h++) { <span class="id-heat-hour" role="columnheader">@h.ToString("00")</span> }
+      </div>
+      @for (int row = 0; row < Model.Endpoints.Count; row++)
+      {
+        string endpoint = Model.Endpoints[row];
+        var withEndpoint = f.With("endpoint", endpoint);
+        <div role="row" style="display: contents">
+          <span class="id-heat-label" role="rowheader"><a @Go(withEndpoint.Url("/")) title="@endpoint">@endpoint</a></span>
+          @for (int h = 0; h < 24; h++)
+          {
+            long count = Model.Cells[row][h];
+            string share = max == 0 ? "0%" : Chart.Pct(Math.Sqrt((double)count / max), 1);
+            string tip = $"{endpoint} · {h:00}:00–{(h + 1) % 24:00}:00 · {Ui.T("traffic.tip", new { count = Ui.F.N(count) })}";
+            if (count == 0)
+            {
+              <span class="id-heat-cell" role="cell" style="--p: 0%" title="@tip"></span>
+            }
+            else
+            {
+              <a class="id-heat-cell" role="cell" style="--p: @share" title="@tip" uk-tooltip="pos: top; delay: 80"
+                 @Go(withEndpoint.With("hour", h.ToString(System.Globalization.CultureInfo.InvariantCulture)).Url("/"))></a>
+            }
+          }
+        </div>
+      }
+    </div>
+  </div>
+</section>

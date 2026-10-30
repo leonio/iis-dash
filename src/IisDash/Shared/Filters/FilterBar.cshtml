@@ -1,0 +1,135 @@
+@inherits RazorSlice<FilterBar.Args>
+@* The filter bar: the fields people set by hand, a chip for each value set by clicking into a chart, and how much of
+   the logs the filter covers. A GET form: changing any field loads the page again with the new URL. *@
+@{
+    var f = Ui.Filter;
+    var o = Model.Options;
+    string status = f["status"] ?? "";
+    string[] classes = ["2xx", "3xx", "4xx", "5xx"];
+}
+<form id="filters" class="uk-card uk-card-default id-filters" method="get" action="@Model.Action" role="search" aria-label="@Ui.T("filters.label")"
+      hx-get="@Model.Action" hx-target="#app" hx-select="#app" hx-swap="outerMorph" hx-push-url="true" hx-trigger="change delay:300ms, submit">
+  @foreach (var (key, value) in f.Values.Where(kv => !LogFilter.FieldKeys.Contains(kv.Key)))
+  {
+    <input type="hidden" name="@key" value="@value">
+  }
+  @foreach (var (key, value) in Model.Keep)
+  {
+    <input type="hidden" name="@key" value="@value">
+  }
+  <div class="id-filter-fields">
+    <div>
+      <label class="uk-form-label" for="f-from">@Ui.T("filters.from")</label>
+      <input id="f-from" name="from" type="datetime-local" class="uk-input uk-form-small" value="@(f["from"] ?? "")"
+             min="@Formats.Input(o.FirstTs)" max="@Formats.Input(o.LastTs + 60)">
+    </div>
+    <div>
+      <label class="uk-form-label" for="f-to">@Ui.T("filters.to")</label>
+      <input id="f-to" name="to" type="datetime-local" class="uk-input uk-form-small" value="@(f["to"] ?? "")"
+             min="@Formats.Input(o.FirstTs)" max="@Formats.Input(o.LastTs + 60)">
+    </div>
+    <div>
+      <label class="uk-form-label" for="f-file">@Ui.T("filters.file")</label>
+      <select id="f-file" name="file" class="uk-select uk-form-small">
+        <option value="">@Ui.T("filters.all_files")</option>
+        @foreach (var file in o.Files)
+        {
+          <option value="@file.Id" selected="@(f["file"] == file.Id.ToString(System.Globalization.CultureInfo.InvariantCulture))">@file.Name</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label class="uk-form-label" for="f-static">@Ui.T("filters.static")</label>
+      <select id="f-static" name="static" class="uk-select uk-form-small" title="@Ui.T("filters.static_tip")">
+        <option value="">@Ui.T("filters.static_all")</option>
+        <option value="hide" selected="@(f["static"] == "hide")">@Ui.T("filters.static_hide")</option>
+        <option value="only" selected="@(f["static"] == "only")">@Ui.T("filters.static_only")</option>
+      </select>
+    </div>
+    <div>
+      <label class="uk-form-label" for="f-method">@Ui.T("filters.method")</label>
+      <select id="f-method" name="method" class="uk-select uk-form-small">
+        <option value="">@Ui.T("filters.any")</option>
+        @foreach (var method in o.Methods)
+        {
+          <option selected="@(f["method"] == method)">@method</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label class="uk-form-label" for="f-status">@Ui.T("filters.status")</label>
+      <select id="f-status" name="status" class="uk-select uk-form-small">
+        <option value="">@Ui.T("filters.any")</option>
+        @foreach (var c in classes)
+        {
+          <option value="@c" selected="@(status == c)">@c</option>
+        }
+        @if (status.Length > 0 && !classes.Contains(status))
+        {
+          <option value="@status" selected>@(status == "other" ? Ui.T("status.other") : status)</option>
+        }
+      </select>
+    </div>
+    <div>
+      <label class="uk-form-label" for="f-path">@Ui.T("filters.path")</label>
+      <input id="f-path" name="path" type="search" class="uk-input uk-form-small id-mono" value="@(f["path"] ?? "")" placeholder="@Ui.T("filters.path_hint")" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="id-filter-actions">
+      <button type="submit" class="uk-button uk-button-default uk-button-small" title="@Ui.T("filters.apply")">@Icon("filter", "id-icon-s") <span class="uk-hidden@xl">@Ui.T("filters.apply")</span></button>
+    </div>
+  </div>
+
+  @{ var chips = Chips(f).ToList(); }
+  @if (!f.IsEmpty)
+  {
+  <div class="id-extent">
+    @if (chips.Count > 0)
+    {
+      <div class="id-chips" aria-label="@Ui.T("filters.drilldown")">
+        @foreach (var (label, value, without) in chips)
+        {
+          <span class="id-chip">
+            <span>@label: <b class="@(label == Ui.T("filters.endpoint") || label == Ui.T("filters.client") ? "id-mono" : null)">@value</b></span>
+            <a @Go(without.Url(Model.Action)) aria-label="@Ui.T("filters.remove"): @label">@Icon("x", "id-icon-xs")</a>
+          </span>
+        }
+      </div>
+    }
+    <span class="uk-text-meta">
+      @if (o.FirstTs is { } first && o.LastTs is { } last)
+      {
+        @Ui.T("filters.extent", new { from = Ui.F.When(first, false), to = Ui.F.When(last, false), files = Ui.F.N(o.Files.Count) })
+      }
+    </span>
+    <a @Go(Model.Action) class="id-link-quiet uk-margin-auto-left">@Icon("x", "id-icon-xs") @Ui.T("filters.clear")</a>
+  </div>
+  }
+</form>
+
+@functions {
+    private IEnumerable<(string Label, string Value, LogFilter Without)> Chips(LogFilter f)
+    {
+        if (f["endpoint"] is { } endpoint) yield return (Ui.T("filters.endpoint"), endpoint, f.Without("endpoint"));
+        if (f["client"] is { } client) yield return (Ui.T("filters.client"), client, f.Without("client"));
+        if (f["user"] is { } user) yield return (Ui.T("filters.user"), user, f.Without("user"));
+        if (f["hour"] is { } hour)
+        {
+            int h = int.Parse(hour, System.Globalization.CultureInfo.InvariantCulture);
+            yield return (Ui.T("filters.hour"), $"{h:00}:00–{(h + 1) % 24:00}:00", f.Without("hour"));
+        }
+
+        long? min = f["min_ms"] is { } a ? long.Parse(a, System.Globalization.CultureInfo.InvariantCulture) : null;
+        long? max = f["max_ms"] is { } b ? long.Parse(b, System.Globalization.CultureInfo.InvariantCulture) : null;
+        if (min is not null || max is not null)
+        {
+            string value = (min, max) switch
+            {
+                ({ } lo, { } hi) => $"{Ui.F.Ms(lo)} – {Ui.F.Ms(hi)}",
+                ({ } lo, null) => $"≥ {Ui.F.Ms(lo)}",
+                (null, { } hi) => $"< {Ui.F.Ms(hi)}",
+                _ => "",
+            };
+            yield return (Ui.T("filters.latency"), value, f.With(("min_ms", null), ("max_ms", null)));
+        }
+    }
+}

@@ -1,0 +1,27 @@
+<Project>
+  <!--
+    Central package management: every version lives here, projects only name packages.
+
+    - RazorSlices: the pages, as Razor templates rendered straight from the minimal API endpoints (no MVC, no Blazor),
+      which compile ahead of time with the rest of the app.
+    - Microsoft.Data.Sqlite.Core + SQLitePCLRaw: one SQLite file, plain SQL. The ".Core" package brings no native
+      SQLite of its own; Program picks the provider per platform (see Shared/Data/Db.cs):
+        - Linux: e_sqlite3, linked statically into the native executable from SQLitePCLRaw.lib.e_sqlite3's libe_sqlite3.a
+          (the 3.x package is the first to ship the static archives), so the binary needs no libsqlite3 next to it.
+        - Windows: winsqlite3, the SQLite that is part of Windows 10, 11 and Server 2016+, so the .exe stands alone.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="RazorSlices" Version="0.12.2" />
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.13" />
+    <PackageVersion Include="SQLitePCLRaw.provider.e_sqlite3" Version="2.1.14" />
+    <PackageVersion Include="SQLitePCLRaw.provider.winsqlite3" Version="2.1.11" />
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.13" />
+    <!-- Tests -->
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
+  </ItemGroup>
+</Project>

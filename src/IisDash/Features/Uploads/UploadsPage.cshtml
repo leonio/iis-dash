@@ -1,0 +1,165 @@
+@inherits RazorSlice<UploadsPage.Args>
+@implements IUsesLayout<Layout, Layout.Args>
+@* Uploading logs: a drop zone that checks the files as soon as they are picked, what the last upload did, and every
+   file uploaded so far with what it held. *@
+@{ var none = new LogFilter(); }
+<div class="id-page">
+  <div class="id-page-head">
+    <div>
+      <h1>@Ui.T("uploads.title")</h1>
+      <p class="uk-text-meta">@Ui.T("uploads.intro")</p>
+    </div>
+  </div>
+
+  <div class="id-grid id-grid-wide">
+    <form id="upload" class="uk-card uk-card-default id-panel" method="post" action="/uploads" enctype="multipart/form-data"
+          hx-post="/uploads" hx-target="#app" hx-select="#app" hx-swap="outerHTML">
+      <div class="id-panel-head">
+        <div>
+          <h2 class="uk-card-title">@Ui.T("uploads.add")</h2>
+          <p class="uk-text-meta">@Ui.T("uploads.formats")</p>
+        </div>
+      </div>
+      <div class="id-panel-body id-stack">
+        <div class="id-drop">
+          @Icon("upload", "id-icon-l")
+          <span class="id-drop-title">@Ui.T("uploads.drop")</span>
+          <span class="uk-text-meta">@Ui.T("uploads.drop_hint")</span>
+          <input type="file" name="files" multiple accept=".log,.txt,.csv,.zip,.gz" aria-label="@Ui.T("uploads.choose")"
+                 hx-post="/uploads/check" hx-trigger="change" hx-target="#precheck" hx-encoding="multipart/form-data">
+        </div>
+        <div id="precheck" aria-live="polite"></div>
+        <div class="uk-flex uk-flex-middle id-gap-m">
+          <button type="submit" class="uk-button uk-button-primary">@Icon("upload", "id-icon-s") @Ui.T("uploads.submit")</button>
+          <span class="id-working"><span class="spinner"></span> @Ui.T("uploads.working")</span>
+        </div>
+        <p class="id-hint">@Ui.T("uploads.script") <code>curl -F file=@@u_ex261030.log http://…/uploads</code></p>
+      </div>
+    </form>
+
+    <section class="uk-card uk-card-default id-panel" aria-labelledby="results-title">
+      <div class="id-panel-head">
+        <div>
+          <h2 id="results-title" class="uk-card-title">@Ui.T("uploads.results")</h2>
+          <p class="uk-text-meta">@(Model.Results is null ? Ui.T("uploads.results_none") : Ui.T("uploads.results_hint"))</p>
+        </div>
+      </div>
+      <div class="id-panel-body">
+        @if (Model.Results is { } results)
+        {
+          <ul class="uk-list id-checks">
+            @foreach (var o in results)
+            {
+              <li>
+                @if (o.Outcome == LogIngestion.Outcome.Ingested)
+                {
+                  @Icon("check", "id-ok")
+                  <span class="id-name" title="@o.Name">@o.Name</span>
+                  <span class="uk-text-meta">
+                    @Ui.T("uploads.ingested", new { count = Ui.F.N(o.Parsed) })@if (o.Failed > 0) { <span class="uk-text-warning"> · @Ui.T("uploads.unreadable", new { count = Ui.F.N(o.Failed) })</span> }@if (o.Replaced) { <span> · @Ui.T("uploads.replaced")</span> }
+                  </span>
+                }
+                else
+                {
+                  @Icon("alert", "id-bad")
+                  <span class="id-name" title="@o.Name">@o.Name</span>
+                  <span class="uk-text-meta id-bad">@Ui.T("uploads.outcome_" + o.Outcome.ToString().ToLowerInvariant())</span>
+                }
+              </li>
+            }
+          </ul>
+          @if (results.Any(o => o.Outcome == LogIngestion.Outcome.Ingested))
+          {
+            <div class="uk-margin-top"><a @Go("/") class="uk-button uk-button-default uk-button-small">@Icon("chart", "id-icon-s") @Ui.T("uploads.to_dashboard")</a></div>
+          }
+        }
+        else
+        {
+          <ul class="uk-list uk-list-disc uk-text-small uk-text-muted">
+            <li>@Ui.T("uploads.tip_replace")</li>
+            <li>@Ui.T("uploads.tip_zip")</li>
+            <li>@Ui.T("uploads.tip_times")</li>
+          </ul>
+        }
+      </div>
+    </section>
+  </div>
+
+  <section class="uk-card uk-card-default" aria-labelledby="files-title">
+    <div class="id-panel-head">
+      <div>
+        <h2 id="files-title" class="uk-card-title">@Ui.T("uploads.files", new { count = Ui.F.N(Model.Files.Count) })</h2>
+      </div>
+    </div>
+    @if (Model.Files.Count == 0)
+    {
+      <div class="id-panel-body"><p class="uk-text-muted">@Ui.T("uploads.files_none")</p></div>
+    }
+    else
+    {
+      <div class="id-panel-body id-panel-body-flush id-table-wrap">
+        <table class="uk-table uk-table-small uk-table-divider uk-table-middle">
+          <thead>
+            <tr>
+              <th>@Ui.T("uploads.file")</th>
+              <th>@Ui.T("uploads.format")</th>
+              <th>@Ui.T("uploads.covers")</th>
+              <th class="id-num">@Ui.T("stats.requests")</th>
+              <th>@Ui.T("uploads.lines")</th>
+              <th class="id-num">@Ui.T("uploads.size")</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var file in Model.Files)
+            {
+              string id = file.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+              <tr>
+                <td class="id-cell-path"><a class="id-path" @Go(none.With("file", id).Url("/")) title="@file.Name">@file.Name</a></td>
+                <td><span class="uk-label id-label-muted">@file.Format</span></td>
+                <td class="id-nums uk-text-meta" style="white-space: nowrap">@Covers(file)</td>
+                <td class="id-num">@Ui.F.N(file.ParsedLines)</td>
+                <td style="white-space: nowrap">
+                  <div class="uk-flex uk-flex-middle id-gap-s" title="@Ui.T("uploads.lines_tip", new { parsed = Ui.F.N(file.ParsedLines), failed = Ui.F.N(file.FailedLines), skipped = Ui.F.N(file.SkippedLines) })">
+                    <span class="id-lines" aria-hidden="true">
+                      <span class="id-fill-s2" style="flex-grow: @file.ParsedLines"></span>
+                      @if (file.FailedLines > 0) { <span class="id-fill-s5" style="flex-grow: @file.FailedLines; min-width: 2px"></span> }
+                      <span class="id-fill-s0" style="flex-grow: @file.SkippedLines"></span>
+                    </span>
+                    @if (file.FailedLines > 0)
+                    {
+                      <a class="uk-text-danger id-xsmall" @Sheet($"/uploads/{id}", file.Name)>@Ui.T("uploads.unreadable", new { count = Ui.F.N(file.FailedLines) })</a>
+                    }
+                    else
+                    {
+                      <span class="uk-text-meta">@Ui.T("uploads.all_read")</span>
+                    }
+                  </div>
+                </td>
+                <td class="id-num uk-text-muted">@Ui.F.Bytes(file.SizeBytes)</td>
+                <td class="id-num">
+                  <form method="post" action="/uploads/@id/delete" hx-post="/uploads/@id/delete" hx-target="#app" hx-select="#app" hx-swap="outerMorph"
+                        hx-confirm="@Ui.T("uploads.delete_confirm", new { name = file.Name })" style="display: inline">
+                    <button type="submit" class="uk-button uk-button-text uk-button-small id-icon-button" title="@Ui.T("uploads.delete")" aria-label="@Ui.T("uploads.delete"): @file.Name">@Icon("trash", "id-icon-s")</button>
+                  </form>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+@functions {
+    /// <summary>The time a file covers; the date once when it is one day, as daily IIS logs are.</summary>
+    private string Covers(UploadRow file) => (file.FirstTs, file.LastTs) switch
+    {
+        ({ } first, { } last) when first / 86400 == last / 86400 => $"{Ui.F.When(first, false)} – {Formats.Clock(last)}",
+        ({ } first, { } last) => $"{Ui.F.When(first, false)} – {Ui.F.When(last, false)}",
+        _ => "–",
+    };
+
+    public Layout.Args LayoutModel => new() { Title = Ui.T("uploads.title"), Section = "uploads" };
+}

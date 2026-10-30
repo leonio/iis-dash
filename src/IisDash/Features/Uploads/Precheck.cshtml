@@ -1,0 +1,31 @@
+@inherits RazorSlice<List<Precheck.Item>>
+@* The files just picked, before uploading: which format each is in, or why it will not be read. *@
+@if (Model.Count > 0)
+{
+  <ul class="uk-list id-checks">
+    @foreach (var item in Model)
+    {
+      <li>
+        @if (item.TooLarge)
+        {
+          @Icon("alert", "id-bad")
+          <span class="id-name" title="@item.Name">@item.Name</span>
+          <span class="uk-text-meta id-bad">@Ui.T("uploads.outcome_toolarge")</span>
+        }
+        else if (item.Format == LogFormat.Unknown)
+        {
+          @Icon("alert", "id-bad")
+          <span class="id-name" title="@item.Name">@item.Name</span>
+          <span class="uk-text-meta id-bad">@Ui.T("uploads.outcome_unsupported")</span>
+        }
+        else
+        {
+          @Icon("check", "id-ok")
+          <span class="id-name" title="@item.Name">@item.Name</span>
+          <span class="uk-label id-label-muted">@(item.Format == LogFormat.W3C ? "W3C" : "IIS")</span>
+          <span class="uk-text-meta id-nums">@Ui.F.Bytes(item.Size)</span>
+        }
+      </li>
+    }
+  </ul>
+}

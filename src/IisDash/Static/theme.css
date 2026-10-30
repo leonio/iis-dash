@@ -1,0 +1,248 @@
+/* The UIkit theme, shared with Spec Coach (agent-framework-sandbox, sample 11). UIkit's look is set by Less variables
+   at build time; this sets the same things as plain overrides of the vendored uikit.min.css, so there is no build step,
+   and adds dark mode, which the compiled CSS cannot do. It keeps UIkit's own character: square edges, cards lifted by
+   shadow rather than framed, small upper-case lettering with wide tracking on buttons, labels, tabs and table heads,
+   light large headings. Colours are app.css's variables (--id-*), which html.dark redefines. */
+
+/* --- base -------------------------------------------------------------------------------------------------------- */
+
+html, body { height: 100%; }
+html {
+  font-family: var(--id-font);
+  color: var(--id-text);
+  background: var(--id-page);
+  -webkit-font-smoothing: antialiased;
+}
+body { font-size: 0.9375rem; }
+
+/* Spacing is set where it is used (the uk-margin-* and id-stack helpers), so blocks bring none of their own. */
+:is(address, dl, fieldset, figure, ol, p, pre, ul, h1, h2, h3, h4, h5, h6, blockquote) { margin-top: 0; margin-bottom: 0; }
+:is(.uk-table, .uk-alert, .uk-placeholder, .uk-progress, .uk-list, .uk-subnav, .uk-breadcrumb, .uk-nav) { margin-top: 0; margin-bottom: 0; }
+fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+
+/* Headings as UIkit sets them: large ones light, small ones firm. */
+h1, h2, h3, h4, h5, h6 { font-family: inherit; color: var(--id-heading); line-height: 1.25; }
+h1 { font-size: 2rem; font-weight: 300; letter-spacing: -0.01em; }
+h2 { font-size: 1.125rem; font-weight: 600; }
+h3 { font-size: 1rem; font-weight: 600; }
+h4 { font-size: 0.9375rem; font-weight: 600; }
+.uk-heading-bullet::before { top: calc(-0.08 * 1em); height: 0.85em; margin-right: 0.55em; border-left: 4px solid var(--id-ink); }
+
+a, .uk-link { color: var(--id-link); }
+a:hover, .uk-link:hover { color: var(--id-link-hover); }
+em { color: inherit; }
+hr { border-top-color: var(--id-border); }
+::selection { background: var(--id-ink); color: var(--id-on-ink); }
+:focus-visible { outline: 2px solid var(--id-accent); outline-offset: 2px; }
+
+:not(pre) > code, :not(pre) > kbd, :not(pre) > samp {
+  padding: 0.05em 0.3em; background: var(--id-surface-muted);
+  font-family: var(--id-mono); font-size: 0.85em; color: inherit; white-space: normal;
+}
+pre { font-family: var(--id-mono); color: var(--id-text); }
+
+/* --- buttons: UIkit's upper case and tracking, square; ink for actions, navy for the accent ------------------------ */
+
+.uk-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+  padding: 0 1.25rem; line-height: 2.375rem; font-size: 0.75rem; font-weight: 600; letter-spacing: var(--id-tracking);
+  text-transform: uppercase; border-radius: 0; white-space: nowrap;
+}
+.uk-button-small { padding: 0 0.85rem; line-height: 1.875rem; font-size: 0.6875rem; }
+.uk-button-default { background-color: transparent; color: var(--id-heading); border: 1px solid var(--id-border-strong); }
+.uk-button-default:hover { background-color: transparent; color: var(--id-heading); border-color: var(--id-heading); }
+.uk-button-default:active, .uk-button-default.uk-active { background-color: var(--id-surface-hover); color: var(--id-heading); border-color: var(--id-heading); }
+.uk-button-primary { background-color: var(--id-ink); color: var(--id-on-ink); border: 1px solid transparent; }
+.uk-button-primary:hover { background-color: var(--id-ink-hover); color: var(--id-on-ink); }
+.uk-button-primary:active, .uk-button-primary.uk-active { background-color: var(--id-ink-hover); color: var(--id-on-ink); }
+.uk-button-secondary { background-color: var(--id-teal); color: #fff; border: 1px solid transparent; }
+.uk-button-secondary:hover { background-color: var(--id-teal-hover); color: #fff; }
+.uk-button-secondary:active, .uk-button-secondary.uk-active { background-color: var(--id-teal-hover); color: #fff; }
+.uk-button.id-button-accent { background-color: var(--id-accent); color: #fff; border: 1px solid transparent; }
+.uk-button.id-button-accent:hover { background-color: var(--id-accent-hover); color: #fff; }
+.uk-button-danger { background-color: transparent; color: var(--id-danger-text); border: 1px solid var(--id-danger-border); }
+.uk-button-danger:hover { background-color: var(--id-danger); color: #fff; border-color: var(--id-danger); }
+.uk-button-danger:active, .uk-button-danger.uk-active { background-color: var(--id-danger); color: #fff; }
+/* UIkit's text button: no frame, a line drawn under it on hover. */
+.uk-button-text { padding: 0; line-height: 1.5; color: var(--id-heading); border: 0; }
+.uk-button-text.uk-button-small { padding: 0; line-height: 1.5; }
+.uk-button-text::before { border-bottom-color: currentColor; }
+.uk-button-text:hover { color: var(--id-heading); }
+.uk-button:disabled { opacity: 0.4; cursor: not-allowed; }
+.uk-button-default:disabled { background-color: transparent; color: var(--id-heading); border-color: var(--id-border-strong); }
+.uk-button-primary:disabled { background-color: var(--id-ink); color: var(--id-on-ink); border-color: transparent; }
+.uk-button-secondary:disabled { background-color: var(--id-teal); color: #fff; border-color: transparent; }
+.uk-button-danger:disabled { background-color: transparent; color: var(--id-danger-text); border-color: var(--id-danger-border); }
+.uk-button-text:disabled { color: var(--id-text-muted); }
+.uk-button-group > .uk-button:not(:first-child) { margin-left: -1px; }
+
+/* Icon buttons in toolbars (the header, the step bar, the panel's head, the layout switch): quiet, no underline. */
+.id-toolbar .uk-button-text, .uk-button-text.id-icon-button {
+  padding: 0.4rem 0.5rem; line-height: 1.25; color: var(--id-text-muted); text-transform: uppercase;
+}
+.id-toolbar .uk-button-text::before, .uk-button-text.id-icon-button::before { display: none; }
+.id-toolbar .uk-button-text:hover, .uk-button-text.id-icon-button:hover { background-color: var(--id-surface-hover); color: var(--id-heading); }
+
+/* --- forms: square, framed, the frame turns navy in focus (no glow) ----------------------------------------------- */
+
+.uk-input, .uk-select, .uk-textarea {
+  background-color: var(--id-field); color: var(--id-heading); border: 1px solid var(--id-border-strong);
+  border-radius: 0; padding: 0 0.85rem; font-size: 0.9375rem;
+}
+.uk-input, .uk-select:not([multiple]):not([size]) { height: 2.5rem; }
+.uk-textarea { padding: 0.55rem 0.85rem; line-height: 1.55; }
+.uk-input:focus, .uk-select:focus, .uk-textarea:focus { background-color: var(--id-field); color: var(--id-heading); border-color: var(--id-accent); box-shadow: inset 0 0 0 1px var(--id-accent); }
+.uk-input:disabled, .uk-select:disabled, .uk-textarea:disabled { background-color: var(--id-surface-muted); color: var(--id-text-muted); border-color: var(--id-border); }
+.uk-input::placeholder, .uk-textarea::placeholder { color: var(--id-text-faint); }
+.uk-textarea[readonly] { background-color: var(--id-surface-muted); }
+.uk-input.id-mono, .uk-textarea.id-mono { font-size: 0.875rem; }
+.uk-form-small:not(textarea):not([multiple]):not([size]) { height: 2rem; padding-left: 0.65rem; font-size: 0.8125rem; }
+.uk-form-small.uk-textarea { font-size: 0.8125rem; }
+.uk-select.uk-form-small:not([multiple]):not([size]) { padding-right: 1.75rem; background-position: right 0.5rem center; }
+.uk-select:not([multiple]):not([size]) {
+  padding-right: 2rem; background-position: right 0.7rem center; background-size: 0.7rem;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23838a95' stroke-width='1.6'/%3E%3C/svg%3E");
+}
+html.dark .uk-select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%238a919c' stroke-width='1.6'/%3E%3C/svg%3E");
+}
+.uk-select:not([multiple]):not([size]) option { color: var(--id-heading); background: var(--id-surface); }
+.uk-checkbox, .uk-radio { margin-top: 0; background-color: var(--id-field); border-color: var(--id-border-strong); flex: none; }
+.uk-checkbox { border-radius: 0; }
+.uk-radio:focus, .uk-checkbox:focus { background-color: var(--id-field); border-color: var(--id-ink); }
+.uk-radio:checked, .uk-checkbox:checked, .uk-checkbox:indeterminate { background-color: var(--id-ink); border-color: transparent; }
+.uk-radio:checked:focus, .uk-checkbox:checked:focus, .uk-checkbox:indeterminate:focus { background-color: var(--id-ink-hover); }
+html.dark .uk-radio:checked { background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle fill='%23111418' cx='8' cy='8' r='2'/%3E%3C/svg%3E"); }
+html.dark .uk-checkbox:checked { background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon fill='%23111418' points='13 3.5 6 10 3 7.5 2 8 6 12.5 14 4 13 3.5'/%3E%3C/svg%3E"); }
+.uk-radio:disabled, .uk-checkbox:disabled { background-color: var(--id-surface-muted); border-color: var(--id-border); }
+.uk-form-label { display: block; margin-bottom: 0.35rem; color: var(--id-heading); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--id-tracking); text-transform: uppercase; }
+.uk-legend { margin-bottom: 0.6rem; color: var(--id-heading); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--id-tracking); text-transform: uppercase; }
+
+/* --- cards, tables, lists ---------------------------------------------------------------------------------------- */
+
+.uk-card { border-radius: 0; }
+.uk-card-default { background-color: var(--id-surface); color: var(--id-text); box-shadow: var(--id-shadow); }
+html.dark .uk-card-default { box-shadow: none; outline: 1px solid var(--id-border); outline-offset: -1px; }
+.uk-card-default .uk-card-title { color: var(--id-heading); }
+.uk-card-default.uk-card-hover:hover { background-color: var(--id-surface); box-shadow: var(--id-shadow-lg); }
+html.dark .uk-card-default.uk-card-hover:hover { outline-color: var(--id-border-strong); }
+.uk-card-default .uk-card-header { border-bottom-color: var(--id-border); }
+.uk-card-default .uk-card-footer { border-top-color: var(--id-border); }
+.uk-card-title { font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--id-tracking); line-height: 1.4; text-transform: uppercase; }
+.uk-card-body { padding: 1.5rem; }
+.uk-card-header, .uk-card-footer { padding: 0.9rem 1.5rem; }
+@media (min-width: 1200px) {
+  .uk-card-body { padding: 1.75rem; }
+  .uk-card-header, .uk-card-footer { padding: 1rem 1.75rem; }
+}
+.uk-card-small .uk-card-body, .uk-card-small.uk-card-body { padding: 1.1rem 1.25rem; }
+
+.uk-table th { padding: 0.75rem 1.1rem; color: var(--id-text-muted); font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--id-tracking); }
+.uk-table td { padding: 0.9rem 1.1rem; vertical-align: top; }
+.uk-table-small th, .uk-table-small td { padding: 0.4rem 0.75rem; }
+.uk-table-middle, .uk-table-middle td { vertical-align: middle; }
+.uk-table-divider > tr:not(:first-child), .uk-table-divider > :not(:first-child) > tr, .uk-table-divider > :first-child > tr:not(:first-child) { border-top-color: var(--id-border); }
+.uk-table-divider > thead > tr { border-bottom: 1px solid var(--id-border); }
+.uk-table-hover > tr:hover, .uk-table-hover tbody tr:hover { background: var(--id-surface-muted); }
+
+.uk-list > :nth-child(n+2), .uk-list > * > ul { margin-top: 0.4rem; }
+.uk-list-collapse > :nth-child(n+2), .uk-list-collapse > * > ul { margin-top: 0; }
+.uk-list-divider > :nth-child(n+2) { border-top-color: var(--id-border); }
+.uk-list-disc > ::marker, .uk-list-decimal > ::marker { color: var(--id-text-faint); }
+
+/* --- labels, badges, alerts, placeholders, progress -------------------------------------------------------------- */
+
+/* Labels: square, small, upper case; solid navy by default, tinted by tone otherwise. Names (methods, status codes,
+   file names) keep their case with id-mono. */
+.uk-label {
+  display: inline-flex; align-items: center; gap: 0.3rem; padding: 0 0.45rem; line-height: 1.375rem;
+  font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--id-tracking); text-transform: uppercase;
+  border-radius: 0; background: var(--id-accent); color: #fff;
+}
+.uk-label.id-mono { font-size: 0.75rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.uk-label-success { background-color: var(--id-success-soft); color: var(--id-success-text); }
+.uk-label-warning { background-color: var(--id-warning-soft); color: var(--id-warning-text); }
+.uk-label-danger { background-color: var(--id-danger-soft); color: var(--id-danger-text); }
+a.uk-label:hover { text-decoration: none; filter: brightness(0.95); }
+
+.uk-badge { height: 1.125rem; min-width: 1.125rem; padding: 0 0.3rem; border-radius: 0; background: var(--id-chip); color: var(--id-text) !important; font-size: 0.6875rem; font-weight: 700; }
+
+/* Alerts: tinted, square, with a rule in the tone's colour down the left. */
+.uk-alert { padding: 0.75rem 2.6rem 0.75rem 1rem; border: 0; border-left: 3px solid var(--id-border-strong); border-radius: 0; background: var(--id-surface-muted); color: var(--id-text); font-size: 0.875rem; }
+.uk-alert-primary { background: var(--id-info-soft); color: var(--id-info-text); border-left-color: var(--id-info); }
+.uk-alert-success { background: var(--id-success-soft); color: var(--id-success-text); border-left-color: var(--id-success); }
+.uk-alert-warning { background: var(--id-warning-soft); color: var(--id-warning-text); border-left-color: var(--id-warning); }
+.uk-alert-danger { background: var(--id-danger-soft); color: var(--id-danger-text); border-left-color: var(--id-danger); }
+.uk-alert-close { top: 0.7rem; right: 0.75rem; padding: 0.1rem; border: 0; background: none; color: inherit; opacity: 0.6; cursor: pointer; }
+.uk-alert-close:hover { opacity: 1; }
+
+.uk-placeholder { padding: 2.25rem 1.5rem; border: 1px dashed var(--id-border-strong); border-radius: 0; background: transparent; }
+
+.uk-progress { height: 0.3rem; border-radius: 0; background-color: var(--id-chip); }
+.uk-progress::-webkit-progress-bar { background-color: var(--id-chip); border-radius: 0; }
+.uk-progress::-webkit-progress-value { background-color: var(--id-accent); }
+.uk-progress::-moz-progress-bar { background-color: var(--id-accent); }
+
+/* --- navigation: the dark header, breadcrumbs, dropdown lists, pills ---------------------------------------------- */
+
+.uk-navbar-container:not(.uk-navbar-transparent) { background: var(--id-surface); border-bottom: 1px solid var(--id-border); }
+.uk-navbar-item, .uk-navbar-nav > li > a { min-height: 3.25rem; padding: 0 0.4rem; font-family: inherit; font-size: 0.875rem; color: var(--id-text-muted); text-transform: none; }
+.uk-logo { gap: 0.6rem; display: inline-flex; align-items: center; color: var(--id-heading); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
+.uk-logo:hover { color: var(--id-heading); text-decoration: none; }
+
+.uk-breadcrumb > * > * { font-size: 0.875rem; color: var(--id-text-muted); }
+.uk-breadcrumb > * > :hover { color: var(--id-heading); text-decoration: none; }
+.uk-breadcrumb > :last-child > span, .uk-breadcrumb > :last-child > a:not([href]) { color: var(--id-heading); }
+.uk-breadcrumb > :nth-child(n+2):not(.uk-first-column)::before { margin: 0 0.55rem; color: var(--id-text-faint); }
+.uk-breadcrumb > * { min-width: 0; }
+.uk-breadcrumb > * > * { display: inline-block; max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+.uk-dropdown { min-width: 12rem; padding: 0.5rem; border-radius: 0; background: var(--id-surface); color: var(--id-text); box-shadow: var(--id-shadow-lg); }
+html.dark .uk-dropdown { outline: 1px solid var(--id-border-strong); outline-offset: -1px; }
+.uk-dropdown :focus-visible { outline-color: var(--id-accent) !important; }
+.uk-dropdown-nav > li > a { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.65rem; color: var(--id-text); font-size: 0.875rem; }
+.uk-dropdown-nav > li > a:hover { background: var(--id-surface-hover); color: var(--id-heading); text-decoration: none; }
+.uk-dropdown-nav > li.uk-active > a { background: var(--id-surface-muted); color: var(--id-heading); font-weight: 600; }
+
+/* Pills, upper case as UIkit has them; the current one in ink. */
+.uk-subnav > * > :first-child { font-size: 0.6875rem; font-weight: 700; letter-spacing: var(--id-tracking); color: var(--id-text-muted); }
+.uk-subnav > * > a:hover { color: var(--id-heading); text-decoration: none; }
+.uk-subnav-pill > * > :first-child { padding: 0.45rem 0.8rem; border-radius: 0; }
+.uk-subnav-pill > * > a:hover { background-color: var(--id-surface-hover); color: var(--id-heading); }
+.uk-subnav-pill > .uk-active > a { background-color: var(--id-ink); color: var(--id-on-ink); }
+
+/* --- dialogs: 45% of the screen, never narrower than 36rem (or the screen) --------------------------------------- */
+
+.uk-modal { background: var(--id-backdrop); }
+.uk-modal-dialog { width: max(45vw, 36rem); border-radius: 0; background: var(--id-surface); color: var(--id-text); box-shadow: var(--id-shadow-lg); }
+.uk-modal-header { background: transparent; border-bottom-color: var(--id-border); }
+.uk-modal-footer { background: transparent; border-top-color: var(--id-border); }
+.uk-modal-title { font-size: 1.5rem; font-weight: 300; color: var(--id-heading); }
+.uk-modal-body { padding: 1.5rem; }
+@media (min-width: 640px) {
+  .uk-modal-body { padding: 1.75rem 2rem; }
+  .uk-modal-header { padding: 1.1rem 2rem; }
+}
+
+.uk-tooltip { max-width: 20rem; padding: 0.4rem 0.65rem; border-radius: 0; background: var(--id-ink); color: var(--id-on-ink); font-size: 0.8125rem; line-height: 1.4; }
+
+/* --- text and background utilities, in the theme's colours -------------------------------------------------------- */
+
+.uk-text-meta { font-size: 0.8125rem; line-height: 1.5; color: var(--id-text-muted); }
+.uk-text-meta > a { color: var(--id-text-muted); }
+.uk-text-meta > a:hover { color: var(--id-heading); }
+.uk-text-muted { color: var(--id-text-muted) !important; }
+.uk-text-emphasis { color: var(--id-heading) !important; }
+.uk-text-primary { color: var(--id-accent-text) !important; }
+.uk-text-secondary { color: var(--id-teal-text) !important; }
+.uk-text-success { color: var(--id-success-text) !important; }
+.uk-text-warning { color: var(--id-warning-text) !important; }
+.uk-text-danger { color: var(--id-danger-text) !important; }
+.uk-text-lead { font-size: 1.0625rem; color: var(--id-heading); }
+.uk-text-bold { font-weight: 600; }
+.uk-link-heading:hover, .uk-link-heading a:hover { color: var(--id-accent-text); text-decoration: none; }
+.uk-link-muted, .uk-link-muted a { color: var(--id-text-muted); }
+.uk-link-muted:hover, .uk-link-muted a:hover { color: var(--id-heading); }
+.uk-link-text:hover, .uk-link-text a:hover { color: var(--id-accent-text); }
+.uk-background-default { background-color: var(--id-surface); }
+.uk-background-muted { background-color: var(--id-surface-muted); }

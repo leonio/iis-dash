@@ -1,0 +1,14 @@
+@inherits RazorSlice<string>
+@implements IUsesLayout<Layout, Layout.Args>
+<div class="id-page">
+  <div class="uk-card uk-card-default uk-card-body uk-text-center id-stack id-error">
+    <div>@Icon("alert", "id-icon-l uk-text-muted")</div>
+    <h1>@Ui.T("error.title")</h1>
+    <p class="uk-text-muted">@Model</p>
+    <div><a @Go("/") class="uk-button uk-button-primary">@Ui.T("nav.dashboard")</a></div>
+  </div>
+</div>
+
+@functions {
+    public Layout.Args LayoutModel => new() { Title = Ui.T("error.title") };
+}

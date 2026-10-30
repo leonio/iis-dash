@@ -1,0 +1,38 @@
+@inherits RazorSlice<DashboardData>
+@* The busiest clients by IP address, with their errors and how much was sent to them. *@
+@{
+    var f = Ui.Filter;
+    long top = Model.Clients.Count == 0 ? 1 : Model.Clients[0].Count;
+}
+<section class="uk-card uk-card-default id-panel" aria-labelledby="clients-title">
+  <div class="id-panel-head">
+    <div>
+      <h2 id="clients-title" class="uk-card-title">@Ui.T("clients.title")</h2>
+      <p class="uk-text-meta">@Ui.T("clients.hint")</p>
+    </div>
+  </div>
+  <div class="id-panel-body id-panel-body-flush id-table-wrap">
+    <table class="uk-table uk-table-small uk-table-divider uk-table-middle">
+      <thead>
+        <tr>
+          <th>@Ui.T("clients.ip")</th>
+          <th class="id-num">@Ui.T("stats.requests")</th>
+          <th class="id-num">@Ui.T("endpoints.errors")</th>
+          <th class="id-num">@Ui.T("stats.sent")</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var c in Model.Clients)
+        {
+          double errors = (double)c.Errors / c.Count;
+          <tr>
+            <td class="id-cell-path"><a class="id-path" @Go(f.With("client", c.Ip).Url("/"))>@c.Ip</a></td>
+            <td class="id-num"><span class="id-share"><i style="--w: @Chart.Pct(c.Count, top)"></i>@Ui.F.N(c.Count)</span></td>
+            <td class="id-num"><span class="id-err-rate @(errors >= 0.1 ? "id-bad" : errors >= 0.05 ? "id-warn" : null)">@Ui.F.Pct(errors)</span></td>
+            <td class="id-num uk-text-muted">@Ui.F.Bytes(c.BytesSent)</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

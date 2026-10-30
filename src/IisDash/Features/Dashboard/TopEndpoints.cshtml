@@ -1,0 +1,50 @@
+@inherits RazorSlice<DashboardData>
+@* The busiest endpoints (ids folded: /orders/:id), each with its share of requests drawn behind the count, its error
+   rate and how long it takes. The name links to the dashboard for that endpoint. *@
+@{
+    var f = Ui.Filter;
+    var rows = Model.Endpoints.Take(10).ToList();
+    long top = rows.Count == 0 ? 1 : rows[0].Count;
+}
+<section class="uk-card uk-card-default id-panel" aria-labelledby="endpoints-title">
+  <div class="id-panel-head">
+    <div>
+      <h2 id="endpoints-title" class="uk-card-title">@Ui.T("endpoints.title")</h2>
+      <p class="uk-text-meta">@Ui.T("endpoints.hint")</p>
+    </div>
+    <div class="uk-flex uk-flex-middle id-gap-xs">
+      @if (f["static"] is null)
+      {
+        <a @Go(f.With("static", "hide").Url("/")) class="uk-button uk-button-text uk-button-small id-icon-button">@Icon("filter", "id-icon-s") @Ui.T("endpoints.hide_static")</a>
+      }
+      <a @Go(f.Url("/endpoints")) class="uk-button uk-button-text uk-button-small id-icon-button">@Ui.T("endpoints.all") @Icon("arrow-right", "id-icon-s")</a>
+    </div>
+  </div>
+  <div class="id-panel-body id-panel-body-flush id-table-wrap">
+    <table class="uk-table uk-table-small uk-table-divider uk-table-middle">
+      <thead>
+        <tr>
+          <th>@Ui.T("endpoints.endpoint")</th>
+          <th class="id-num">@Ui.T("stats.requests")</th>
+          <th class="id-num">@Ui.T("endpoints.errors")</th>
+          <th class="id-num">@Ui.T("endpoints.avg")</th>
+          <th class="id-num">@Ui.T("endpoints.max")</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var e in rows)
+        {
+          double errors = (double)(e.ClientErrors + e.ServerErrors) / e.Count;
+          <tr>
+            <td class="id-cell-path"><a class="id-path" @Go(f.With("endpoint", e.Endpoint).Url("/")) title="@e.Endpoint">@e.Endpoint</a></td>
+            <td class="id-num"><span class="id-share"><i style="--w: @Chart.Pct(e.Count, top)"></i>@Ui.F.N(e.Count)</span></td>
+            <td class="id-num"><span class="id-err-rate @(e.ServerErrors > 0 && (double)e.ServerErrors / e.Count >= 0.01 ? "id-bad" : errors >= 0.05 ? "id-warn" : null)"
+                                     title="4xx @Ui.F.N(e.ClientErrors) · 5xx @Ui.F.N(e.ServerErrors)">@Ui.F.Pct(errors)</span></td>
+            <td class="id-num">@Ui.F.Ms(e.AvgMs)</td>
+            <td class="id-num uk-text-muted">@Ui.F.Ms(e.MaxMs)</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

@@ -1,0 +1,26 @@
+@inherits RazorSlice<UploadFailures.Args>
+@implements IUsesLayout<Layout, Layout.Args>
+@* The lines of one file that could not be read, with why: in the slide-in panel from the uploads list. *@
+@{ var file = Model.File; }
+<div class="@(Ui.Embedded ? "id-stack" : "id-page")">
+  @if (!Ui.Embedded) { <h1>@file.Name</h1> }
+  <p class="uk-text-meta">@Ui.T("failures.intro", new { failed = Ui.F.N(file.FailedLines), total = Ui.F.N(file.TotalLines) })</p>
+  @if (Model.Lines.Count < file.FailedLines)
+  {
+    <p class="uk-text-meta">@Ui.T("failures.first", new { count = Ui.F.N(Model.Lines.Count) })</p>
+  }
+  @foreach (var line in Model.Lines)
+  {
+    <div class="id-stack-xs">
+      <div class="uk-flex uk-flex-middle id-gap-s id-xsmall">
+        <span class="uk-label id-label-muted id-mono">@Ui.T("failures.line", new { line = Ui.F.N(line.LineNo) })</span>
+        <span class="uk-text-danger">@line.Error</span>
+      </div>
+      <pre class="id-pre">@line.Text</pre>
+    </div>
+  }
+</div>
+
+@functions {
+    public Layout.Args LayoutModel => new() { Title = Model.File.Name, Section = "uploads" };
+}

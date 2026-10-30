@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>IisDash</RootNamespace>
+    <AssemblyName>iis-dash</AssemblyName>
+    <Version>0.0.0-dev</Version>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- One native executable per platform: compiled ahead of time, no .NET install needed, nothing next to it. The
+         pages, texts, schema and static files are embedded (see the EmbeddedResource items below). Setting it here also
+         runs the AOT, trim and single-file analyzers on every build, so code that would break the native build fails
+         the ordinary one. -->
+    <PublishAot>true</PublishAot>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <StripSymbols>true</StripSymbols>
+    <!-- Diagnostics the app does not use, left out of the native build. -->
+    <EventSourceSupport>false</EventSourceSupport>
+    <MetricsSupport>false</MetricsSupport>
+    <DebuggerSupport>false</DebuggerSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    <!-- The static files are embedded, not published as wwwroot; and the symbols stay out of the release. -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+  </PropertyGroup>
+
+  <!-- The container: `dotnet publish -t:PublishContainer -r linux-x64`, no Dockerfile. A native app goes on .NET's
+       runtime-deps image (no .NET in it), the chiseled Ubuntu one: no shell, no package manager, a non-root user. -->
+  <PropertyGroup>
+    <ContainerRepository>iis-dash</ContainerRepository>
+    <ContainerFamily>noble-chiseled</ContainerFamily>
+    <ContainerWorkingDirectory>/app/</ContainerWorkingDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <ContainerPort Include="8080" Type="tcp" />
+    <ContainerEnvironmentVariable Include="ASPNETCORE_HTTP_PORTS" Value="8080" />
+    <ContainerEnvironmentVariable Include="IISDASH_DATA" Value="/home/app" />
+    <ContainerLabel Include="org.opencontainers.image.description" Value="IIS log dashboard" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RazorSlices" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.provider.e_sqlite3" />
+    <PackageReference Include="SQLitePCLRaw.provider.winsqlite3" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Static\**\*" />
+    <EmbeddedResource Include="Locales\*.json" LogicalName="Locales.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Shared\Data\schema.sql" LogicalName="schema.sql" />
+    <Content Remove="Locales\*.json" />
+  </ItemGroup>
+
+  <!-- Linux, native: SQLite linked into the executable (DirectPInvoke resolves SQLitePCLRaw's calls to "e_sqlite3" at
+       link time), so the shared library the package also carries is not published next to it. Windows uses winsqlite3,
+       which ships with Windows, so its e_sqlite3.dll is not published either. -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != '' and $(RuntimeIdentifier.StartsWith('linux'))">
+    <DirectPInvoke Include="e_sqlite3" />
+    <NativeLibrary Include="$(PkgSQLitePCLRaw_lib_e_sqlite3)/runtimes/$(RuntimeIdentifier)/native/libe_sqlite3.a" />
+  </ItemGroup>
+  <Target Name="LeaveOutSharedSqlite" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(RuntimeIdentifier)' != ''">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Filename)' == 'libe_sqlite3' or '%(Filename)' == 'e_sqlite3'" />
+    </ItemGroup>
+  </Target>
+
+</Project>

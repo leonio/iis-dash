@@ -1,0 +1,52 @@
+@inherits RazorSlice<DashboardData>
+@* Status: the classes as one bar, their counts and shares, then the codes behind them. Each links to the page
+   filtered to it. *@
+@{
+    var f = Ui.Filter;
+    (int Class, string Key, string Label)[] classes = [(2, "2xx", "2xx"), (3, "3xx", "3xx"), (4, "4xx", "4xx"), (5, "5xx", "5xx")];
+}
+<section class="uk-card uk-card-default id-panel" aria-labelledby="status-title">
+  <div class="id-panel-head">
+    <div>
+      <h2 id="status-title" class="uk-card-title">@Ui.T("status.title")</h2>
+      <p class="uk-text-meta">@Ui.T("status.hint")</p>
+    </div>
+  </div>
+  <div class="id-panel-body id-stack">
+    <div class="id-segbar" role="img" aria-label="@string.Join(", ", classes.Select(c => $"{c.Label} {Ui.F.Pct(Model.Share(Model.Classes[c.Class]))}"))">
+      @foreach (var c in classes.Where(c => Model.Classes[c.Class] > 0))
+      {
+        <a class="id-fill-s@(c.Class)" style="flex-grow: @Model.Classes[c.Class]" title="@c.Label: @Ui.F.N(Model.Classes[c.Class])" @Go(f.With("status", c.Key).Url("/"))></a>
+      }
+      @if (Model.Classes[0] > 0) { <span class="id-fill-s0" style="flex-grow: @Model.Classes[0]"></span> }
+    </div>
+    <div class="id-classes">
+      @foreach (var c in classes)
+      {
+        <a class="id-class id-s@(c.Class)" @Go(f.With("status", c.Key).Url("/"))>
+          <span class="id-caps">@c.Label</span>
+          <b>@Ui.F.N(Model.Classes[c.Class])</b>
+          <span>@Ui.F.Pct(Model.Share(Model.Classes[c.Class]))</span>
+        </a>
+      }
+    </div>
+    <div>
+      <h3 class="id-caps uk-text-muted uk-margin-small-bottom">@Ui.T("status.codes")</h3>
+      <div class="id-codes">
+        @foreach (var (code, count) in Model.Codes.Take(12))
+        {
+          if (code is null)
+          {
+            <a class="id-code" @Go(f.With("status", "other").Url("/"))>@Ui.T("status.none") <span>@Ui.F.N(count)</span></a>
+          }
+          else
+          {
+            <a class="id-code @StatusTone(code)" title="@Ui.F.Pct(Model.Share(count))" @Go(f.With("status", code.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)).Url("/"))>
+              <b class="id-mono">@code</b> <span>@Ui.F.N(count)</span>
+            </a>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</section>
