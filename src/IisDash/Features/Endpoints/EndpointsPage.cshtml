@@ -1,0 +1,163 @@
+@inherits RazorSlice<EndpointsPage.Args>
+@implements IUsesLayout<Layout, Layout.Args>
+@* Every endpoint, busiest first (or sorted by errors, speed, volume), each with when it is hit: a timeline over the
+   filter's time range, scaled to its own busiest moment so the shape shows even for quiet endpoints. Leaving the
+   static files out (the filter's "Static files") answers "which pages and APIs are hit most, and when". *@
+@{
+    var d = Model.Data;
+    var f = Ui.Filter;
+    long top = d.Rows.Count == 0 ? 1 : d.Rows.Max(r => r.Count);
+    long firstRow = (long)(d.Page - 1) * EndpointsQuery.PageSize + 1;
+}
+<div class="id-page">
+  <div class="id-page-head">
+    <div>
+      <h1>@Ui.T("endpoints.page_title")</h1>
+      <p class="uk-text-meta">@Ui.T("endpoints.page_intro")</p>
+    </div>
+    @if (d.Requests > 0)
+    {
+      <div class="uk-flex uk-flex-middle id-gap-s">
+        @if (f["static"] is null)
+        {
+          <a @Go(f.With("static", "hide").Url("/endpoints")) class="uk-button uk-button-default">@Icon("filter", "id-icon-s") @Ui.T("endpoints.hide_static")</a>
+        }
+        @await RenderPartialAsync(IisDash.Features.Export.ExportMenu.Create())
+      </div>
+    }
+  </div>
+
+  @if (Model.Options.HasData)
+  {
+    @await RenderPartialAsync(FilterBar.Create(new FilterBar.Args
+    {
+        Action = "/endpoints",
+        Options = Model.Options,
+        Keep = Ui.Here.Contains("sort=") ? [("sort", d.Sort), ("dir", d.Descending ? "desc" : "asc")] : [],
+    }))
+  }
+
+  <section class="uk-card uk-card-default" aria-labelledby="endpoints-count">
+    <div class="id-panel-head">
+      <div>
+        <h2 id="endpoints-count" class="uk-card-title">
+          @if (d.Endpoints == 0) { @Ui.T("endpoints.none") }
+          else { @Ui.T("endpoints.showing", new { from = Ui.F.N(firstRow), to = Ui.F.N(firstRow + d.Rows.Count - 1), total = Ui.F.N(d.Endpoints), requests = Ui.F.N(d.Requests) }) }
+        </h2>
+        @if (d.FirstTs is { } first && d.BucketSeconds > 0)
+        {
+          <p class="uk-text-meta">@Ui.T("endpoints.timeline_hint", new { from = Ui.F.When(first, false), bucket = Chart.BucketText(Ui, d.BucketSeconds) })</p>
+        }
+      </div>
+    </div>
+    @if (d.Endpoints > 0)
+    {
+      <div class="id-panel-body id-panel-body-flush id-table-wrap">
+        <table class="uk-table uk-table-small uk-table-divider uk-table-middle">
+          <thead>
+            <tr>
+              <th aria-sort="@AriaSort("endpoint")">@SortHead("endpoint", "endpoints.endpoint")</th>
+              <th class="id-num" aria-sort="@AriaSort("requests")">@SortHead("requests", "stats.requests")</th>
+              <th>@Ui.T("endpoints.when")</th>
+              <th class="id-num" aria-sort="@AriaSort("errors")">@SortHead("errors", "endpoints.errors")</th>
+              <th class="id-num" aria-sort="@AriaSort("avg")">@SortHead("avg", "endpoints.avg")</th>
+              <th class="id-num" aria-sort="@AriaSort("max")">@SortHead("max", "endpoints.max")</th>
+              <th class="id-num" aria-sort="@AriaSort("sent")">@SortHead("sent", "stats.sent")</th>
+              <th class="id-num" aria-sort="@AriaSort("clients")">@SortHead("clients", "endpoints.clients")</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var e in d.Rows)
+            {
+              var only = new LogFilter().With(("endpoint", e.Endpoint), ("from", f["from"]), ("to", f["to"]), ("file", f["file"]));
+              <tr>
+                <td class="id-cell-path">
+                  <span class="uk-flex uk-flex-middle id-gap-s">
+                    <a class="id-path uk-text-truncate" @Go(only.Url("/")) title="@e.Endpoint">@e.Endpoint</a>
+                    @if (e.Static) { <span class="uk-label id-label-muted id-tag">@Ui.T("endpoints.static")</span> }
+                  </span>
+                </td>
+                <td class="id-num">
+                  <span class="id-share"><i style="--w: @Chart.Pct(e.Count, top)"></i>@Ui.F.N(e.Count)</span>
+                  <span class="id-share-pct">@Ui.F.Pct((double)e.Count / d.Requests)</span>
+                </td>
+                <td>@Timeline(e, d)</td>
+                <td class="id-num"><span class="id-err-rate @(e.Count > 0 && (double)e.ServerErrors / e.Count >= 0.01 ? "id-bad" : e.ErrorRate >= 0.05 ? "id-warn" : null)"
+                                         title="4xx @Ui.F.N(e.ClientErrors) · 5xx @Ui.F.N(e.ServerErrors)">@Ui.F.Pct(e.ErrorRate)</span></td>
+                <td class="id-num">@Ui.F.Ms(e.AvgMs)</td>
+                <td class="id-num uk-text-muted">@Ui.F.Ms(e.MaxMs)</td>
+                <td class="id-num uk-text-muted">@Ui.F.Bytes(e.BytesSent)</td>
+                <td class="id-num uk-text-muted">@Ui.F.N(e.Clients)</td>
+                <td class="id-num"><a class="uk-button uk-button-text uk-button-small id-icon-button" @Go(only.Url("/requests")) title="@Ui.T("endpoints.see_requests")" aria-label="@Ui.T("endpoints.see_requests"): @e.Endpoint">@Icon("list", "id-icon-s")</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (d.Pages > 1)
+      {
+        <nav class="id-pager" aria-label="@Ui.T("requests.pages")">
+          <span class="uk-text-meta">@Ui.T("requests.page", new { page = Ui.F.N(d.Page), pages = Ui.F.N(d.Pages) })</span>
+          <div class="uk-flex id-gap-s">
+            @if (d.Page > 1)
+            {
+              <a class="uk-button uk-button-default uk-button-small" @Go(Link(d.Sort, d.Descending, d.Page - 1)) rel="prev">@Icon("chevron-left", "id-icon-s") @Ui.T("requests.previous")</a>
+            }
+            @if (d.Page < d.Pages)
+            {
+              <a class="uk-button uk-button-default uk-button-small" @Go(Link(d.Sort, d.Descending, d.Page + 1)) rel="next">@Ui.T("requests.next") @Icon("chevron-right", "id-icon-s")</a>
+            }
+          </div>
+        </nav>
+      }
+    }
+    else
+    {
+      <div class="id-panel-body"><p class="uk-text-muted">@(Model.Options.HasData ? Ui.T("dashboard.none_text") : Ui.T("dashboard.empty_text"))</p></div>
+    }
+  </section>
+</div>
+
+@functions {
+    public Layout.Args LayoutModel => new() { Title = Ui.T("endpoints.page_title"), Section = "endpoints" };
+
+    /// <summary>When an endpoint is hit: a column per bucket, as high as its share of the endpoint's busiest bucket.</summary>
+    private IHtmlContent Timeline(EndpointStats e, EndpointsPageData d)
+    {
+        long max = e.Timeline.Length == 0 ? 0 : e.Timeline.Max();
+        <span class="id-spark" role="img" aria-label="@Ui.T("endpoints.when")">
+          @for (int i = 0; i < e.Timeline.Length; i++)
+          {
+            long count = e.Timeline[i];
+            long start = d.FirstTs!.Value + i * d.BucketSeconds;
+            <i style="height: @(count == 0 ? "0" : Chart.Pct(Math.Max(count, max / 20.0), max))" title="@Ui.F.When(start, false) · @Ui.T("traffic.tip", new { count = Ui.F.N(count) })"></i>
+          }
+        </span>
+        return HtmlString.Empty;
+    }
+
+    private string Link(string sort, bool descending, int page)
+    {
+        var parts = new List<string>();
+        string query = Ui.Filter.Query();
+        if (query.Length > 0) parts.Add(query);
+        if (sort != "requests" || !descending) parts.Add($"sort={sort}&dir={(descending ? "desc" : "asc")}");
+        if (page > 1) parts.Add("page=" + page.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return parts.Count == 0 ? "/endpoints" : "/endpoints?" + string.Join('&', parts);
+    }
+
+    private string? AriaSort(string key) =>
+        Model.Data.Sort == key ? (Model.Data.Descending ? "descending" : "ascending") : null;
+
+    private IHtmlContent SortHead(string key, string label)
+    {
+        var d = Model.Data;
+        bool current = d.Sort == key;
+        bool descending = current ? !d.Descending : EndpointsQuery.Sorts[key].Descending;
+        <a class="id-sort @(current ? "id-sorted" : null)" @Go(Link(key, descending, 1))>
+          @Ui.T(label) @Icon(current ? (d.Descending ? "sort-desc" : "sort-asc") : "sort")
+        </a>
+        return HtmlString.Empty;
+    }
+}

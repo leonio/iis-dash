@@ -480,3 +480,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# IIS Dash: the database when run from the repository, and the sample logs tools/gen-logdata.cs writes
+data/
+sample-logs/

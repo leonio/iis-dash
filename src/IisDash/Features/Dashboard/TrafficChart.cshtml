@@ -1,0 +1,67 @@
+@inherits RazorSlice<DashboardData>
+@* Requests over time, a column per bucket, stacked by status class (2xx at the bottom, 5xx on top). A column is a link
+   that zooms the whole page to its time; the bucket width follows the range, down to a minute. *@
+@{
+    var t = Model.Traffic;
+    long yMax = Chart.Nice(t.Max);
+    var f = Ui.Filter;
+    int[] order = [2, 3, 4, 5, 0];
+}
+<section class="uk-card uk-card-default id-panel" aria-labelledby="traffic-title">
+  <div class="id-panel-head">
+    <div>
+      <h2 id="traffic-title" class="uk-card-title">@Ui.T("traffic.title")</h2>
+      <p class="uk-text-meta">@Chart.BucketText(Ui, t.BucketSeconds) · @Ui.T("traffic.hint")</p>
+    </div>
+    @if (f["from"] is not null || f["to"] is not null)
+    {
+      <a @Go(f.With(("from", null), ("to", null)).Url("/")) class="uk-button uk-button-text uk-button-small id-icon-button">@Icon("zoom-out", "id-icon-s") @Ui.T("traffic.zoom_out")</a>
+    }
+  </div>
+  <div class="id-panel-body">
+    <div class="id-chart id-chart-tall">
+      <div class="id-yaxis" aria-hidden="true">
+        @for (int i = 0; i <= 4; i++)
+        {
+          <span style="bottom: @(i * 25)%">@Ui.F.N(yMax * i / 4)</span>
+        }
+      </div>
+      <div class="id-plot" role="list" aria-label="@Ui.T("traffic.title")">
+        @foreach (var (start, byClass) in t.Buckets)
+        {
+          long total = byClass.Sum();
+          string when = $"{Ui.F.When(start, false)} – {Formats.Clock(start + t.BucketSeconds)}";
+          string tip = $"{when} · {Ui.T("traffic.tip", new { count = Ui.F.N(total) })}" +
+                       (byClass[5] > 0 ? $" · 5xx {Ui.F.N(byClass[5])}" : "") + (byClass[4] > 0 ? $" · 4xx {Ui.F.N(byClass[4])}" : "");
+          if (total == 0)
+          {
+            <span class="id-col id-col-empty" role="listitem" title="@tip"><span class="id-col-fill"></span></span>
+            continue;
+          }
+          <a class="id-col" role="listitem" title="@tip" uk-tooltip="pos: top; delay: 80"
+             @Go(f.With(("from", LogFilter.TimeValue(start)), ("to", LogFilter.TimeValue(start + t.BucketSeconds))).Url("/"))>
+            <span class="id-col-fill" style="height: @Chart.Pct(total, yMax)">
+              @foreach (int c in order)
+              {
+                if (byClass[c] > 0) { <i class="id-fill-s@(c)" style="flex-grow: @byClass[c]"></i> }
+              }
+            </span>
+          </a>
+        }
+      </div>
+      <div class="id-xaxis" aria-hidden="true">
+        @foreach (var (index, label, strong) in Chart.TimeTicks(Ui, t))
+        {
+          <span class="@(index == 0 ? "id-x-start" : null)" style="left: @Chart.Position(index, t.Buckets.Count, index == 0)">@if (strong) { <b>@label</b> } else { @label }</span>
+        }
+      </div>
+    </div>
+    <div class="id-legend uk-margin-small-top">
+      <span><i class="id-swatch id-fill-s2"></i>2xx</span>
+      <span><i class="id-swatch id-fill-s3"></i>3xx</span>
+      <span><i class="id-swatch id-fill-s4"></i>4xx</span>
+      <span><i class="id-swatch id-fill-s5"></i>5xx</span>
+      @if (Model.Classes[0] > 0) { <span><i class="id-swatch id-fill-s0"></i>@Ui.T("status.other")</span> }
+    </div>
+  </div>
+</section>

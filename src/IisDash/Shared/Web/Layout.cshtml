@@ -1,0 +1,135 @@
+@inherits RazorLayoutSlice<Layout.Args>
+@* The page around every screen: the header with the sections, the language menu and the theme switch, the flash
+   message, and the content. Pages use it with @implements IUsesLayout<Layout, Layout.Args>. Everything inside #app is
+   what a link inside the app replaces (Ui.Go morphs it in), so the header follows the filter too; the slide-in panel
+   sits outside it, so it stays open while the page behind it changes. Loaded into the panel (Ui.Embedded), a page
+   comes alone. *@
+@if (Ui.Embedded)
+{
+  @await RenderBodyAsync()
+}
+else
+{
+@Raw("<!doctype html>")
+<html lang="@Ui.Lang">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@(Model.Title.Length > 0 ? Model.Title + " · IIS Dash" : "IIS Dash")</title>
+  <link rel="icon" href="/static/favicon.svg?v=@Ui.Version" type="image/svg+xml">
+  <script>
+    // Before first paint, so dark mode does not flash light.
+    (function () {
+      var stored = null;
+      try { stored = localStorage.getItem("theme"); } catch (e) {}
+      var dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.classList.toggle("dark", dark);
+    })();
+  </script>
+  @* UIkit and htmx are vendored and embedded in the executable, like the font, so the app works without internet.
+     theme.css themes UIkit; app.css is the app's own: colours, charts, layout. *@
+  <link rel="preload" href="/static/vendor/fonts/source-sans-3-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/vendor/uikit-3.25.26.min.css">
+  <link rel="stylesheet" href="/static/theme.css?v=@Ui.Version">
+  <link rel="stylesheet" href="/static/app.css?v=@Ui.Version">
+  <script src="/static/vendor/uikit-3.25.26.min.js" defer></script>
+  <script src="/static/vendor/htmx-4.0.0.min.js" defer></script>
+  <script src="/static/app.js?v=@Ui.Version" defer></script>
+</head>
+<body>
+  <div id="app" class="id-app">
+    <header class="uk-navbar-container id-header">
+      <div class="uk-navbar">
+        <div class="uk-navbar-left">
+          <a @Go(Ui.Filter.Url("/")) class="uk-navbar-item uk-logo">
+            <img src="/static/favicon.svg?v=@Ui.Version" alt="" width="22" height="22">
+            <span>IIS Dash</span>
+          </a>
+          <nav aria-label="@Ui.T("nav.label")">
+            <ul class="uk-navbar-nav id-nav">
+              @NavItem("dashboard", Ui.Filter.Url("/"), "chart")
+              @NavItem("endpoints", Ui.Filter.Url("/endpoints"), "grid")
+              @NavItem("requests", Ui.Filter.Url("/requests"), "list")
+              @NavItem("uploads", "/uploads", "upload")
+            </ul>
+          </nav>
+        </div>
+        <div class="uk-navbar-right">
+          <div class="uk-navbar-item id-toolbar id-gap-xs">
+            <div class="uk-inline">
+              <button type="button" class="uk-button uk-button-text" title="@Ui.T("language")" aria-label="@Ui.T("language"): @I18n.OwnName(Ui.Lang)">
+                @Icon("globe")
+                <span>@Ui.Lang.ToUpperInvariant()</span>
+                @Icon("chevron-down", "id-icon-xs")
+              </button>
+              <div uk-dropdown="mode: click; pos: bottom-right; animation: false">
+                <ul class="uk-nav uk-dropdown-nav" aria-label="@Ui.T("language")">
+                  @foreach (var language in I18n.Languages)
+                  {
+                    bool current = language == Ui.Lang;
+                    <li class="@(current ? "uk-active" : null)">
+                      <a href="/lang/@language?next=@Q(Ui.Here)" lang="@language" aria-current="@(current ? "true" : null)">
+                        <span class="uk-width-expand">@I18n.OwnName(language)</span>
+                        <span class="id-mono id-xsmall uk-text-muted">@language.ToUpperInvariant()</span>
+                        <span class="id-check">@if (current) { @Icon("check", "id-icon-s") }</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </div>
+            </div>
+            <button type="button" class="uk-button uk-button-text" data-theme-toggle title="@Ui.T("theme")" aria-label="@Ui.T("theme")">
+              @Icon("moon", "id-when-light")
+              @Icon("sun", "id-when-dark")
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="id-loading" aria-hidden="true"></div>
+    </header>
+    @if (Ui.Msg.Length > 0 || Ui.Err.Length > 0)
+    {
+      bool error = Ui.Err.Length > 0;
+      <div class="id-flash">
+        <div class="uk-alert @(error ? "uk-alert-danger" : "uk-alert-success")" role="@(error ? "alert" : "status")" uk-alert>
+          <button type="button" class="uk-alert-close" aria-label="@Ui.T("close")">@Icon("x", "id-icon-s")</button>
+          <p>@(error ? Ui.Err : Ui.Msg)</p>
+        </div>
+      </div>
+    }
+    <main class="id-main">
+      @await RenderBodyAsync()
+    </main>
+    <footer class="id-footer">
+      <span>IIS Dash @Ui.Version</span>
+      <span aria-hidden="true">·</span>
+      <span>@Ui.T("footer.times")</span>
+    </footer>
+  </div>
+
+  @* The slide-in panel: one request's details, one upload's unreadable lines. Links made with Ui.Sheet load their page
+     into it with htmx; app.js opens it with the link's title. *@
+  <div id="sheet" class="uk-modal id-sheet" uk-modal="stack: true">
+    <div class="uk-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="uk-modal-header id-overlay-head">
+        <h2 id="sheet-title" class="uk-modal-title uk-text-truncate"></h2>
+        <a id="sheet-page" href="/" class="uk-button uk-button-text uk-button-small id-icon-button" title="@Ui.T("sheet.open_page")">@Icon("external", "id-icon-s")</a>
+        <button type="button" class="uk-button uk-button-text uk-button-small uk-modal-close id-icon-button" aria-label="@Ui.T("close")">@Icon("x")</button>
+      </div>
+      <div id="sheet-body" class="uk-modal-body id-overlay-body"></div>
+    </div>
+  </div>
+</body>
+</html>
+}
+
+@functions {
+    private IHtmlContent NavItem(string section, string href, string icon)
+    {
+        bool current = section == Model.Section;
+        <li class="@(current ? "uk-active" : null)">
+          <a @Go(href) aria-current="@(current ? "page" : null)">@Icon(icon, "id-icon-s") <span>@Ui.T("nav." + section)</span></a>
+        </li>
+        return HtmlString.Empty;
+    }
+}

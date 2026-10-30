@@ -1,0 +1,56 @@
+@inherits RazorSlice<RequestDetailData>
+@implements IUsesLayout<Layout, Layout.Args>
+@* One request: what was asked and what came back, every field the log had, where it came from, and links to the
+   requests like it. Opens in the slide-in panel from the requests list; on its own it is an ordinary page. *@
+@{
+    var r = Model;
+    var none = new LogFilter();
+    string[] skip = ["method", "uri_stem", "uri_query", "status"];
+}
+<div class="@(Ui.Embedded ? "id-stack-l" : "id-page")">
+  @if (!Ui.Embedded) { <h1>@Ui.T("request.title")</h1> }
+  <div class="id-stack-s">
+    <div class="id-request-head">
+      <span class="uk-label">@(r.Method ?? "–")</span>
+      <span class="id-path">@PathAndQuery(r.UriStem, r.UriQuery)</span>
+    </div>
+    <div class="uk-flex uk-flex-middle uk-flex-wrap id-gap-m uk-text-meta">
+      <span class="id-status id-big-status @StatusTone(r.Status)">@(r.Status?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "–")</span>
+      <span>@Icon("clock", "id-icon-s") @Ui.F.Ms(r.Field("time_taken_ms") is { } ms ? double.Parse(ms, System.Globalization.CultureInfo.InvariantCulture) : null)</span>
+      <span>@Ui.F.When(r.Ts)</span>
+    </div>
+  </div>
+
+  <div class="id-related">
+    <a class="uk-button uk-button-default uk-button-small" @Go(none.With("endpoint", r.Endpoint).Url("/"))>@Icon("chart", "id-icon-s") @Ui.T("request.endpoint_dashboard")</a>
+    @if (r.ClientIp is { } ip)
+    {
+      <a class="uk-button uk-button-default uk-button-small" @Go(none.With("client", ip).Url("/requests"))>@Icon("user", "id-icon-s") @Ui.T("request.client_requests")</a>
+    }
+    @if (r.Ts is { } ts)
+    {
+      <a class="uk-button uk-button-default uk-button-small" @Go(none.With(("from", LogFilter.TimeValue(ts - 300)), ("to", LogFilter.TimeValue(ts + 300))).Url("/requests"))>@Icon("clock", "id-icon-s") @Ui.T("request.around")</a>
+    }
+  </div>
+
+  <div>
+    <h3 class="id-caps uk-text-muted id-section-title">@Ui.T("request.fields")</h3>
+    <dl class="id-fields uk-margin-small-top">
+      <dt>@Ui.T("request.endpoint")</dt>
+      <dd class="id-mono">@r.Endpoint</dd>
+      @foreach (var (key, value) in r.Fields.Where(f => f.Value is not null && !skip.Contains(f.Key)))
+      {
+        <dt>@Ui.T("field." + key)</dt>
+        <dd class="@(key is "user_agent" or "referer" or "cookie" or "client_ip" or "server_ip" ? "id-mono" : null)">@(key is "time_taken_ms" or "bytes_sent" or "bytes_received" && long.TryParse(value, out long n) ? Ui.F.N(n) : value)</dd>
+      }
+    </dl>
+  </div>
+
+  <p class="uk-text-meta">
+    @Icon("file", "id-icon-s") @Ui.T("request.source", new { file = r.FileName, line = Ui.F.N(r.LineNo) })
+  </p>
+</div>
+
+@functions {
+    public Layout.Args LayoutModel => new() { Title = Ui.T("request.title"), Section = "requests" };
+}

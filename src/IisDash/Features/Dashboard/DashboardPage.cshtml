@@ -1,0 +1,85 @@
+@inherits RazorSlice<DashboardPage.Args>
+@implements IUsesLayout<Layout, Layout.Args>
+@* The dashboard: the filter, the numbers that matter, then traffic, status, latency, when each endpoint is busy, and
+   who and what is busiest. Every mark links to the same page with the filter narrowed to it. *@
+@{ var d = Model.Data; var f = Ui.Filter; }
+<div class="id-page">
+  <div class="id-page-head">
+    <div>
+      <h1>@Ui.T("dashboard.title")</h1>
+      <p class="uk-text-meta">
+        @if (d.Total > 0)
+        {
+          @Ui.T("dashboard.summary", new { count = Ui.F.N(d.Total), from = Ui.F.When(d.FirstTs, false), to = Ui.F.When(d.LastTs, false) })
+        }
+        else
+        {
+          @Ui.T("dashboard.intro")
+        }
+      </p>
+    </div>
+    @if (d.Total > 0)
+    {
+      <div class="uk-flex uk-flex-middle id-gap-s">
+        <a @Go(f.Url("/requests")) class="uk-button uk-button-default">@Icon("list", "id-icon-s") @Ui.T("dashboard.see_requests")</a>
+        @await RenderPartialAsync(ExportMenu.Create())
+      </div>
+    }
+  </div>
+
+  @if (!Model.Options.HasData)
+  {
+    <div class="uk-card uk-card-default id-empty id-stack">
+      <div>@Icon("upload", "id-icon-l uk-text-muted")</div>
+      <h2>@Ui.T("dashboard.empty_title")</h2>
+      <p class="uk-text-muted">@Ui.T("dashboard.empty_text")</p>
+      <div><a @Go("/uploads") class="uk-button uk-button-primary">@Icon("upload", "id-icon-s") @Ui.T("uploads.title")</a></div>
+    </div>
+  }
+  else
+  {
+    @await RenderPartialAsync(FilterBar.Create(new FilterBar.Args { Action = "/", Options = Model.Options }))
+
+    @if (d.Total == 0)
+    {
+      <div class="uk-card uk-card-default id-empty id-stack">
+        <div>@Icon("search", "id-icon-l uk-text-muted")</div>
+        <h2>@Ui.T("dashboard.none_title")</h2>
+        <p class="uk-text-muted">@Ui.T("dashboard.none_text")</p>
+        <div><a @Go("/") class="uk-button uk-button-default">@Ui.T("filters.clear")</a></div>
+      </div>
+    }
+    else
+    {
+      <section class="uk-card uk-card-default" aria-label="@Ui.T("dashboard.figures")">
+        <dl class="id-stats">
+          <div class="id-stat"><dd>@Ui.F.N(d.Total)</dd><dt>@Ui.T("stats.requests")</dt></div>
+          <div class="id-stat @(d.Share(d.ServerErrors) >= 0.01 ? "id-stat-bad" : null)"><dd>@Ui.F.Pct(d.Share(d.ServerErrors))</dd><dt>@Ui.T("stats.server_errors")</dt><span class="id-stat-note">@Ui.F.N(d.ServerErrors) × 5xx</span></div>
+          <div class="id-stat @(d.Share(d.ClientErrors) >= 0.05 ? "id-stat-warn" : null)"><dd>@Ui.F.Pct(d.Share(d.ClientErrors))</dd><dt>@Ui.T("stats.client_errors")</dt><span class="id-stat-note">@Ui.F.N(d.ClientErrors) × 4xx</span></div>
+          <div class="id-stat"><dd>@Ui.F.Ms(d.P50)</dd><dt>@Ui.T("stats.p50")</dt></div>
+          <div class="id-stat"><dd>@Ui.F.Ms(d.P95)</dd><dt>@Ui.T("stats.p95")</dt></div>
+          <div class="id-stat"><dd>@Ui.F.Ms(d.P99)</dd><dt>@Ui.T("stats.p99")</dt></div>
+          <div class="id-stat"><dd>@Ui.F.Bytes(d.BytesSent)</dd><dt>@Ui.T("stats.sent")</dt></div>
+        </dl>
+      </section>
+
+      @await RenderPartialAsync(TrafficChart.Create(d))
+
+      <div class="id-grid">
+        @await RenderPartialAsync(StatusPanel.Create(d))
+        @await RenderPartialAsync(LatencyChart.Create(d))
+      </div>
+
+      @await RenderPartialAsync(HeatmapPanel.Create(d.Heatmap))
+
+      <div class="id-grid id-grid-wide">
+        @await RenderPartialAsync(TopEndpoints.Create(d))
+        @await RenderPartialAsync(TopClients.Create(d))
+      </div>
+    }
+  }
+</div>
+
+@functions {
+    public Layout.Args LayoutModel => new() { Title = Ui.T("dashboard.title"), Section = "dashboard" };
+}

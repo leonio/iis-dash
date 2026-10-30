@@ -1,0 +1,13 @@
+@inherits RazorSlice
+@* Export: the page's figures or its requests as an Excel workbook, for the filter in the URL. Plain links: the browser
+   downloads them. *@
+@{ string query = Ui.Filter.Query(); string q = query.Length > 0 ? "?" + query : ""; }
+<div class="uk-inline">
+  <button type="button" class="uk-button uk-button-primary">@Icon("download", "id-icon-s") @Ui.T("export.title") @Icon("chevron-down", "id-icon-xs")</button>
+  <div uk-dropdown="mode: click; pos: bottom-right; animation: false" class="id-export-menu">
+    <ul class="uk-nav uk-dropdown-nav">
+      <li><a href="/export/summary.xlsx@q" download>@Icon("chart", "id-icon-s") <span class="uk-width-expand">@Ui.T("export.summary")<br><span class="uk-text-meta">@Ui.T("export.summary_hint")</span></span></a></li>
+      <li><a href="/export/requests.xlsx@q" download>@Icon("list", "id-icon-s") <span class="uk-width-expand">@Ui.T("export.requests")<br><span class="uk-text-meta">@Ui.T("export.requests_hint")</span></span></a></li>
+    </ul>
+  </div>
+</div>

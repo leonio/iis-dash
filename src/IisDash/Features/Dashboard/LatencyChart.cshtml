@@ -1,0 +1,67 @@
+@inherits RazorSlice<DashboardData>
+@* How long requests took: a column per range (roughly logarithmic, as latencies are), the median, 95th and 99th
+   percentile marked over the column they fall in. A second and slower in amber. A column links to the page filtered
+   to that range. *@
+@{
+    var f = Ui.Filter;
+    var buckets = Model.Latency;
+    long yMax = Chart.Nice(buckets.Count == 0 ? 0 : buckets.Max(b => b.Count));
+    var marks = new List<(string Label, long Value)>();
+    if (Model.P50 is { } p50) marks.Add(("p50", p50));
+    if (Model.P95 is { } p95) marks.Add(("p95", p95));
+    if (Model.P99 is { } p99) marks.Add(("p99", p99));
+}
+<section class="uk-card uk-card-default id-panel" aria-labelledby="latency-title">
+  <div class="id-panel-head">
+    <div>
+      <h2 id="latency-title" class="uk-card-title">@Ui.T("latency.title")</h2>
+      <p class="uk-text-meta">@Ui.T("latency.hint", new { avg = Ui.F.Ms(Model.AvgMs) })</p>
+    </div>
+  </div>
+  <div class="id-panel-body">
+    @if (Model.Timed == 0)
+    {
+      <p class="uk-text-muted">@Ui.T("latency.none")</p>
+    }
+    else
+    {
+      <div class="id-chart">
+        <div class="id-yaxis" aria-hidden="true">
+          @for (int i = 0; i <= 4; i++) { <span style="bottom: @(i * 25)%">@Ui.F.N(yMax * i / 4)</span> }
+        </div>
+        <div class="id-plot" role="list" aria-label="@Ui.T("latency.title")">
+          @foreach (var b in buckets)
+          {
+            var here = marks.Where(m => m.Value >= b.From && (b.To is null || m.Value < b.To)).ToList();
+            string range = b.To is { } to ? $"{Ui.F.Ms(b.From)} – {Ui.F.Ms(to)}" : $"≥ {Ui.F.Ms(b.From)}";
+            string tip = $"{range} · {Ui.T("traffic.tip", new { count = Ui.F.N(b.Count) })} ({Ui.F.Pct((double)b.Count / Model.Timed)})";
+            var target = f.With(("min_ms", b.From == 0 ? null : b.From.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                                ("max_ms", b.To?.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            <a class="id-col" role="listitem" title="@tip" uk-tooltip="pos: top; delay: 80" @Go(target.Url("/"))>
+              @if (here.Count > 0)
+              {
+                <span class="id-marks" style="bottom: @Chart.Pct(b.Count, yMax)">@foreach (var m in here) { <span class="id-mark">@m.Label</span> }</span>
+              }
+              <span class="id-col-fill" style="height: @Chart.Pct(b.Count, yMax)"><i class="@(b.From >= 1000 ? "id-fill-slow" : "id-fill-bar")"></i></span>
+            </a>
+          }
+        </div>
+        <div class="id-xaxis id-xaxis-cats" aria-hidden="true">
+          @foreach (var b in buckets)
+          {
+            <span>@(b.To is null ? "≥" + Short(b.From) : Short(b.From))</span>
+          }
+        </div>
+      </div>
+      <div class="id-legend uk-margin-small-top">
+        <span><i class="id-swatch id-fill-bar"></i>@Ui.T("latency.fast")</span>
+        <span><i class="id-swatch id-fill-slow"></i>@Ui.T("latency.slow")</span>
+        <span>@Ui.T("latency.axis")</span>
+      </div>
+    }
+  </div>
+</section>
+
+@functions {
+    private string Short(long ms) => ms >= 1000 ? Ui.F.N(ms / 1000.0, ms % 1000 == 0 ? 0 : 1) + " s" : Ui.F.N(ms);
+}
